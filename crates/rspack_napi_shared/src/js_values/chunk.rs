@@ -1,4 +1,3 @@
-use napi_derive::napi;
 use rspack_core::ChunkAssetArgs;
 
 #[napi(object)]

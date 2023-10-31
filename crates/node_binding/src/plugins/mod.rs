@@ -12,13 +12,13 @@ use rspack_core::{
   PluginNormalModuleFactoryResolveForSchemeOutput, ResourceData,
 };
 use rspack_error::internal_error;
-use rspack_napi_shared::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
-use rspack_napi_shared::NapiResultExt;
-
-use crate::js_values::{
+use rspack_napi_shared::js_values::{
   AfterResolveData, BeforeResolveData, JsAssetEmittedArgs, JsChunkAssetArgs, JsModule,
   JsResolveForSchemeInput, JsResolveForSchemeResult, ToJsModule,
 };
+use rspack_napi_shared::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
+use rspack_napi_shared::NapiResultExt;
+
 use crate::{DisabledHooks, Hook, JsCompilation, JsHooks};
 
 pub struct JsHooksAdapter {

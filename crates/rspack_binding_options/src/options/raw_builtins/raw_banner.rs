@@ -5,6 +5,7 @@ use napi::{Env, JsFunction};
 use napi_derive::napi;
 use rspack_error::internal_error;
 use rspack_napi_shared::{
+  js_values::JsChunk,
   threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode},
   NapiResultExt, NAPI_ENV,
 };
@@ -12,8 +13,6 @@ use rspack_plugin_banner::{
   BannerContent, BannerContentFnCtx, BannerPluginOptions, BannerRule, BannerRules,
 };
 use serde::Deserialize;
-
-use crate::chunk::JsChunk;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]

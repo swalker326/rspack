@@ -1,9 +1,11 @@
 #![feature(try_blocks)]
+#[macro_use]
+extern crate napi_derive;
 
 mod errors;
 mod ext;
-mod js_values;
-mod utils;
+pub mod js_values;
+pub mod utils;
 pub use errors::{NapiErrorExt, NapiResultExt};
 
 pub mod threadsafe_function;

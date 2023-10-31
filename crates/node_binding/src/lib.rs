@@ -4,9 +4,6 @@
 #[macro_use]
 extern crate napi_derive;
 
-#[macro_use]
-extern crate rspack_binding_macros;
-
 use std::collections::HashSet;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -20,20 +17,18 @@ use rspack_fs_node::{AsyncNodeWritableFileSystem, ThreadsafeNodeFS};
 use rspack_napi_shared::NAPI_ENV;
 
 mod hook;
-mod js_values;
 mod loader;
 mod plugins;
-mod utils;
 
 use hook::*;
-use js_values::*;
 // Napi macro registered this successfully
 #[allow(unused)]
 use loader::*;
 use plugins::*;
 use rspack_binding_options::*;
+use rspack_napi_shared::js_values::*;
+use rspack_napi_shared::utils::*;
 use rspack_tracing::chrome::FlushGuard;
-use utils::*;
 
 #[cfg(not(target_os = "linux"))]
 #[global_allocator]

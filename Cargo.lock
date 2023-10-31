@@ -2687,9 +2687,17 @@ dependencies = [
 name = "rspack_napi_shared"
 version = "0.1.0"
 dependencies = [
+ "dashmap",
+ "futures",
  "napi",
+ "napi-derive",
+ "napi-sys",
+ "rspack_binding_macros",
+ "rspack_core",
  "rspack_error",
+ "rspack_identifier",
  "rspack_regex",
+ "rustc-hash",
  "tokio",
 ]
 
