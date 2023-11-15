@@ -307,7 +307,7 @@ pub fn create_fake_chunk(
 ) -> Chunk {
   let mut fake_chunk = Chunk::new(None, ChunkKind::Normal);
   fake_chunk.name = name;
-  fake_chunk.rendered_hash = rendered_hash.and_then(|h| Some(h.into()));
+  fake_chunk.rendered_hash = rendered_hash.map(|h| h.into());
   fake_chunk.id = id;
   fake_chunk
 }

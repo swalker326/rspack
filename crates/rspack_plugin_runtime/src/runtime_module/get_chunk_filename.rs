@@ -60,9 +60,9 @@ impl RuntimeModule for GetChunkFilenameRuntimeModule {
     let chunks = self
       .chunk
       .and_then(|chunk_ukey| compilation.chunk_by_ukey.get(&chunk_ukey))
-      .and_then(|chunk| {
+      .map(|chunk| {
         if self.all_chunks {
-          Some(chunk.get_all_referenced_chunks(&compilation.chunk_group_by_ukey))
+          chunk.get_all_referenced_chunks(&compilation.chunk_group_by_ukey)
         } else {
           let mut chunks = chunk.get_all_async_chunks(&compilation.chunk_group_by_ukey);
           if compilation
@@ -80,7 +80,7 @@ impl RuntimeModule for GetChunkFilenameRuntimeModule {
                 ),
             );
           }
-          Some(chunks)
+          chunks
         }
       });
 
@@ -154,9 +154,9 @@ impl RuntimeModule for GetChunkFilenameRuntimeModule {
       .and_then(|filename| {
         chunk_filenames
           .get(filename)
-          .and_then(|chunks| Some((filename, chunks)))
+          .map(|chunks| (filename, chunks))
       })
-      .and_then(|(filename, chunks)| {
+      .map(|(filename, chunks)| {
         let (fake_filename, hash_len_map) = create_chunk_filename_template(filename);
         let fake_chunk = create_fake_chunk(
           Some("\" + chunkId + \"".to_string()),
@@ -168,20 +168,17 @@ impl RuntimeModule for GetChunkFilenameRuntimeModule {
             chunks,
             &chunk_map,
           )),
-          Some(
-            stringify_dynamic_chunk_map(
-              |c| {
-                let hash = c.rendered_hash.as_ref().map(|hash| hash.to_string());
-                match hash_len_map.get("[chunkhash]") {
-                  Some(hash_len) => hash.map(|s| s[..*hash_len].to_string()),
-                  None => hash,
-                }
-              },
-              chunks,
-              &chunk_map,
-            )
-            .into(),
-          ),
+          Some(stringify_dynamic_chunk_map(
+            |c| {
+              let hash = c.rendered_hash.as_ref().map(|hash| hash.to_string());
+              match hash_len_map.get("[chunkhash]") {
+                Some(hash_len) => hash.map(|s| s[..*hash_len].to_string()),
+                None => hash,
+              }
+            },
+            chunks,
+            &chunk_map,
+          )),
         );
 
         let content_hash = Some(stringify_dynamic_chunk_map(
@@ -212,7 +209,7 @@ impl RuntimeModule for GetChunkFilenameRuntimeModule {
           None => format!("\" + {}() + \"", RuntimeGlobals::GET_FULL_HASH),
         };
 
-        Some(format!(
+        format!(
           "\"{}\"",
           compilation.get_path(
             &fake_filename,
@@ -221,7 +218,7 @@ impl RuntimeModule for GetChunkFilenameRuntimeModule {
               .hash_optional(Some(full_hash.as_str()))
               .content_hash_optional(content_hash.as_deref()),
           )
-        ))
+        )
       });
 
     let mut static_urls = RawHashMap::new();
@@ -242,20 +239,19 @@ impl RuntimeModule for GetChunkFilenameRuntimeModule {
               .id
               .as_ref()
               .map(|chunk_id| unquoted_stringify(chunk, chunk_id)),
-            if let Some(chunk_name) = &chunk.name {
-              Some(unquoted_stringify(chunk, chunk_name))
-            } else if let Some(chunk_id) = &chunk.id {
-              Some(unquoted_stringify(chunk, chunk_id))
-            } else {
-              None
+            match &chunk.name {
+              Some(chunk_name) => Some(unquoted_stringify(chunk, chunk_name)),
+              None => chunk
+                .id
+                .as_ref()
+                .map(|chunk_id| unquoted_stringify(chunk, chunk_id)),
             },
             chunk.rendered_hash.as_ref().map(|chunk_hash| {
               let hash = unquoted_stringify(chunk, &chunk_hash.as_ref().to_string());
-              let res = match hash_len_map.get("[chunkhash]") {
+              match hash_len_map.get("[chunkhash]") {
                 Some(hash_len) => hash[..*hash_len].to_string(),
                 None => hash,
-              };
-              res.into()
+              }
             }),
           );
 
