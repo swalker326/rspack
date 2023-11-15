@@ -1,11 +1,12 @@
-use std::collections::HashMap as RawHashMap;
+use std::collections::{HashMap as RawHashMap, HashSet as RawHashSet};
 
+use itertools::Itertools;
 use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
 use rspack_core::{
-  get_js_chunk_filename_template, Chunk, ChunkLoading, ChunkUkey, Compilation, Filename, PathData,
-  SourceType, CHUNK_HASH_PLACEHOLDER, CONTENT_HASH_PLACEHOLDER, FULL_HASH_PLACEHOLDER,
-  HASH_PLACEHOLDER,
+  get_js_chunk_filename_template, stringify_map, Chunk, ChunkKind, ChunkLoading, ChunkUkey,
+  Compilation, Filename, PathData, SourceType, CHUNK_HASH_PLACEHOLDER, CONTENT_HASH_PLACEHOLDER,
+  FULL_HASH_PLACEHOLDER, HASH_PLACEHOLDER,
 };
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
@@ -217,6 +218,98 @@ pub fn create_chunk_filename_template(
       .into_owned();
   }
   (Filename::from(template), hash_len_map)
+}
+
+pub fn stringify_dynamic_chunk_map<F>(
+  f: F,
+  chunks: &RawHashSet<&ChunkUkey>,
+  chunk_map: &RawHashMap<&ChunkUkey, &Chunk>,
+) -> String
+where
+  F: Fn(&Chunk) -> Option<String>,
+{
+  let mut result = HashMap::default();
+  let mut use_id = false;
+  let mut last_key = None;
+  let mut entries = 0;
+
+  for chunk_ukey in chunks.iter() {
+    if let Some(chunk) = chunk_map.get(chunk_ukey) {
+      if let Some(chunk_id) = &chunk.id {
+        if let Some(value) = f(chunk) {
+          if value == *chunk_id {
+            use_id = true;
+          } else {
+            result.insert(
+              chunk_id.clone(),
+              serde_json::to_string(&value).expect("invalid json to_string"),
+            );
+            last_key = Some(chunk_id.clone());
+            entries += 1;
+          }
+        }
+      }
+    }
+  }
+
+  let content = if entries == 0 {
+    "chunkId".to_string()
+  } else if entries == 1 {
+    if let Some(last_key) = last_key {
+      if use_id {
+        format!(
+          "(chunkId === {} ? {} : chunkId)`",
+          serde_json::to_string(&last_key).expect("invalid json to_string"),
+          result.get(&last_key).expect("cannot find last key value")
+        )
+      } else {
+        result
+          .get(&last_key)
+          .expect("cannot find last key value")
+          .clone()
+      }
+    } else {
+      unreachable!();
+    }
+  } else if use_id {
+    format!("({}[chunkId] || chunkId)", stringify_map(&result))
+  } else {
+    format!("{}[chunkId]", stringify_map(&result))
+  };
+  format!("\" + {content} + \"")
+}
+
+pub fn stringify_static_chunk_map(filename: &String, chunk_ids: &Vec<&String>) -> String {
+  let condition = if chunk_ids.len() == 1 {
+    format!(
+      "chunkId === {}",
+      serde_json::to_string(&chunk_ids.first()).expect("invalid json to_string")
+    )
+  } else {
+    let content = chunk_ids
+      .iter()
+      .map(|chunk_id| {
+        format!(
+          "{}:1",
+          serde_json::to_string(chunk_id).expect("invalid json to_string")
+        )
+      })
+      .join(",");
+    format!("{{ {} }}[chunkId]", content)
+  };
+  format!("if ({}) return {};", condition, filename)
+}
+
+pub fn create_fake_chunk(
+  id: Option<String>,
+  name: Option<String>,
+  rendered_hash: Option<String>,
+) -> Chunk {
+  let mut fake_chunk = Chunk::new(None, ChunkKind::Normal);
+  fake_chunk.name = name;
+  fake_chunk.rendered_hash = rendered_hash.and_then(|h| Some(h.into()));
+  fake_chunk.id = id;
+  fake_chunk
 }
 
 #[test]
