@@ -1,5 +1,11 @@
+use std::collections::HashMap as RawHashMap;
+
+use once_cell::sync::Lazy;
+use regex::{Captures, Regex};
 use rspack_core::{
-  get_js_chunk_filename_template, Chunk, ChunkLoading, ChunkUkey, Compilation, PathData, SourceType,
+  get_js_chunk_filename_template, Chunk, ChunkLoading, ChunkUkey, Compilation, Filename, PathData,
+  SourceType, CHUNK_HASH_PLACEHOLDER, CONTENT_HASH_PLACEHOLDER, FULL_HASH_PLACEHOLDER,
+  HASH_PLACEHOLDER,
 };
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
@@ -171,6 +177,46 @@ pub fn is_enabled_for_chunk(
     .and_then(|options| options.chunk_loading.as_ref())
     .unwrap_or(&compilation.options.output.chunk_loading);
   chunk_loading == expected
+}
+
+pub fn unquoted_stringify(chunk: &Chunk, str: &String) -> String {
+  if let Some(chunk_id) = &chunk.id {
+    if str.len() >= 5 && str == chunk_id {
+      return "\" + chunkId + \"".to_string();
+    }
+  }
+  let result = serde_json::to_string(&str).expect("invalid json to_string");
+  result[1..result.len() - 1].to_string()
+}
+
+static HASH_REPLACERS: Lazy<Vec<(&Lazy<Regex>, &str)>> = Lazy::new(|| {
+  vec![
+    (&HASH_PLACEHOLDER, "[hash]"),
+    (&FULL_HASH_PLACEHOLDER, "[fullhash]"),
+    (&CHUNK_HASH_PLACEHOLDER, "[chunkhash]"),
+    (&CONTENT_HASH_PLACEHOLDER, "[contenthash]"),
+  ]
+});
+
+pub fn create_chunk_filename_template(
+  filename: &Filename,
+) -> (Filename, RawHashMap<String, usize>) {
+  let mut hash_len_map = RawHashMap::new();
+  let mut template = filename.template().to_string();
+  for (reg, key) in HASH_REPLACERS.iter() {
+    template = reg
+      .replace_all(&template, |caps: &Captures| {
+        if let Some(hash_len) = match caps.get(2) {
+          Some(m) => m.as_str().parse().ok(),
+          None => None,
+        } {
+          hash_len_map.insert(key.to_string(), hash_len);
+        }
+        key
+      })
+      .into_owned();
+  }
+  (Filename::from(template), hash_len_map)
 }
 
 #[test]

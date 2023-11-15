@@ -3078,6 +3078,7 @@ dependencies = [
  "itertools",
  "once_cell",
  "rayon",
+ "regex",
  "rspack_core",
  "rspack_error",
  "rspack_hash",
