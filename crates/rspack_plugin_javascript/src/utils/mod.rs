@@ -1,4 +1,5 @@
 mod get_prop_from_obj;
+mod mangle_exports;
 
 use std::path::Path;
 
