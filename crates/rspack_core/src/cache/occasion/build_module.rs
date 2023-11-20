@@ -69,7 +69,7 @@ impl BuildModuleOccasion {
 
     let mut need_cache = false;
     let mut last_build_result = None;
-    let id = module.identifier().to_owned();
+    let id: Identifier = module.identifier().to_owned();
     if module.as_normal_module().is_some() {
       // normal module
       // TODO cache all module type

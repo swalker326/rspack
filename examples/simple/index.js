@@ -1,0 +1,2 @@
+import "./a";
+import "./shared";

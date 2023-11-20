@@ -80,7 +80,7 @@ export interface KnownCreateStatsOptionsContext {
 }
 
 export interface ExecuteModuleArgument {
-	result: CodeGenerationResult;
+	codeGenerationResult: CodeGenerationResult;
 	moduleObject: {
 		id: string;
 		exports: any;

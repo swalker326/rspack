@@ -74,6 +74,7 @@ pub enum DependencyType {
   ProvideModuleForShared,
   /// consume shared fallback
   ConsumeSharedFallback,
+  LoaderImport,
   Custom(Box<str>), // TODO it will increase large layout size
 }
 
@@ -109,6 +110,7 @@ impl DependencyType {
       DependencyType::WasmImport => Cow::Borrowed("wasm import"),
       DependencyType::WasmExportImported => Cow::Borrowed("wasm export imported"),
       DependencyType::StaticExports => Cow::Borrowed("static exports"),
+      DependencyType::LoaderImport => Cow::Borrowed("loader import"),
       DependencyType::Custom(ty) => Cow::Owned(format!("custom {ty}")),
       DependencyType::ExportInfoApi => Cow::Borrowed("export info api"),
       // TODO: mode

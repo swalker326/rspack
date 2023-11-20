@@ -11,7 +11,7 @@ use crate::{
   ModuleProfile, ModuleType, NormalModuleFactory, NormalModuleFactoryContext, Resolve,
   ResolverFactory, SharedPluginDriver, WorkerQueue,
 };
-use crate::{BoxModule, DependencyId, ExportInfo, ExportsInfo, SucceedModuleArgs, UsageState};
+use crate::{BoxModule, DependencyId, ExportInfo, ExportsInfo, UsageState};
 
 #[derive(Debug)]
 pub enum TaskResult {
@@ -390,7 +390,7 @@ impl WorkerTask for BuildTask {
             compiler_context: CompilerContext {
               options: compiler_options.clone(),
               resolver_factory: resolver_factory.clone(),
-              module: Some(module.identifier()),
+              module: module.identifier(),
               module_context: module.as_normal_module().and_then(|m| m.get_context()),
             },
             plugin_driver: plugin_driver.clone(),
@@ -414,15 +414,15 @@ impl WorkerTask for BuildTask {
       current_profile.mark_building_end();
     }
 
-    if let Ok(build_result) = &build_result {
-      plugin_driver
-        .succeed_module(&SucceedModuleArgs {
-          module: &module,
-          build_result: &build_result.inner,
-        })
-        .await
-        .unwrap_or_else(|e| panic!("Run succeed_module hook failed: {}", e));
-    }
+    // if let Ok(build_result) = &build_result {
+    //   plugin_driver
+    //     .succeed_module(&SucceedModuleArgs {
+    //       module: &module,
+    //       build_result: &build_result.inner,
+    //     })
+    //     .await
+    //     .unwrap_or_else(|e| panic!("Run succeed_module hook failed: {}", e));
+    // }
 
     build_result.map(|build_result| {
       let (build_result, diagnostics) = build_result.split_into_parts();
@@ -453,6 +453,21 @@ pub struct ProcessDependenciesResult {
 }
 
 pub type ProcessDependenciesQueue = WorkerQueue<ProcessDependenciesTask>;
+
+#[derive(Clone, Debug)]
+pub struct BuildTimeExecutionOption {
+  pub public_path: Option<String>,
+  pub base_uri: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct BuildTimeExecutionTask {
+  pub module: ModuleIdentifier,
+  pub options: BuildTimeExecutionOption,
+  pub sender: UnboundedSender<Result<String>>,
+}
+
+pub type BuildTimeExecutionQueue = WorkerQueue<BuildTimeExecutionTask>;
 
 pub struct CleanTask {
   pub module_identifier: ModuleIdentifier,
@@ -516,6 +531,7 @@ pub enum QueueTask {
   Add(Box<AddTask>),
   Build(Box<BuildTask>),
   ProcessDependencies(Box<ProcessDependenciesTask>),
+  BuildTimeExecution(Box<BuildTimeExecutionTask>),
 
   Subscription(Box<Subscription>),
 }
@@ -556,6 +572,10 @@ impl std::fmt::Debug for QueueHandler {
 }
 
 impl QueueHandler {
+  pub fn add_task(&self, task: QueueTask) {
+    self.sender.send(task).expect("failed to add task");
+  }
+
   pub fn wait_for(&self, key: String, category: TaskCategory, callback: QueueHandleCallback) {
     self
       .sender
@@ -582,6 +602,7 @@ impl QueueHandlerProcessor {
     add_queue: &mut AddQueue,
     build_queue: &mut BuildQueue,
     process_dependencies_queue: &mut ProcessDependenciesQueue,
+    buildtime_execution_queue: &mut BuildTimeExecutionQueue,
   ) {
     while let Ok(task) = self.receiver.try_recv() {
       match task {
@@ -596,6 +617,9 @@ impl QueueHandlerProcessor {
         }
         QueueTask::ProcessDependencies(task) => {
           process_dependencies_queue.add_task(*task);
+        }
+        QueueTask::BuildTimeExecution(task) => {
+          buildtime_execution_queue.add_task(*task);
         }
         QueueTask::Subscription(subscription) => {
           let Subscription {

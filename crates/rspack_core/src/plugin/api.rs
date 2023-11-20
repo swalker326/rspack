@@ -5,17 +5,18 @@ use rspack_error::Result;
 use rspack_hash::RspackHashDigest;
 use rspack_loader_runner::{Content, ResourceData};
 use rspack_sources::BoxSource;
+use tokio::sync::mpsc::UnboundedSender;
 
 use crate::{
   AdditionalChunkRuntimeRequirementsArgs, AdditionalModuleRequirementsArgs, AssetEmittedArgs,
-  AssetInfo, BoxLoader, BoxModule, ChunkAssetArgs, ChunkHashArgs, CodeGenerationResults,
-  Compilation, CompilationArgs, CompilerOptions, ContentHashArgs, DoneArgs, FactorizeArgs,
-  JsChunkHashArgs, MakeParam, Module, ModuleFactoryResult, ModuleIdentifier, ModuleType,
-  NormalModule, NormalModuleAfterResolveArgs, NormalModuleBeforeResolveArgs,
-  NormalModuleCreateData, NormalModuleFactoryContext, OptimizeChunksArgs, ParserAndGenerator,
-  PluginContext, ProcessAssetsArgs, RenderArgs, RenderChunkArgs, RenderManifestArgs,
-  RenderModuleContentArgs, RenderStartupArgs, Resolver, SourceType, SucceedModuleArgs,
-  ThisCompilationArgs,
+  AssetInfo, BoxLoader, BoxModule, BuildTimeExecutionOption, ChunkAssetArgs, ChunkHashArgs,
+  CodeGenerationResults, Compilation, CompilationArgs, CompilerOptions, ContentHashArgs,
+  DependencyId, DoneArgs, FactorizeArgs, JsChunkHashArgs, MakeParam, Module, ModuleFactoryResult,
+  ModuleIdentifier, ModuleType, NormalModule, NormalModuleAfterResolveArgs,
+  NormalModuleBeforeResolveArgs, NormalModuleCreateData, NormalModuleFactoryContext,
+  OptimizeChunksArgs, ParserAndGenerator, PluginContext, ProcessAssetsArgs, RenderArgs,
+  RenderChunkArgs, RenderManifestArgs, RenderModuleContentArgs, RenderStartupArgs, Resolver,
+  SourceType, SucceedModuleArgs, ThisCompilationArgs,
 };
 
 // use anyhow::{Context, Result};
@@ -479,6 +480,15 @@ pub trait Plugin: Debug + Send + Sync {
   }
 
   fn seal(&self, _compilation: &mut Compilation) -> Result<()> {
+    Ok(())
+  }
+
+  fn prepare_execute_module(
+    &self,
+    _id: DependencyId,
+    _options: &BuildTimeExecutionOption,
+    _import_module_informer: UnboundedSender<Result<String>>,
+  ) -> Result<()> {
     Ok(())
   }
 

@@ -1,6 +1,7 @@
 use std::{
   fmt::Debug,
   hash::{BuildHasherDefault, Hash},
+  iter::once,
   path::PathBuf,
   sync::{
     atomic::{AtomicBool, Ordering},
@@ -15,7 +16,8 @@ use rayon::prelude::{
   IntoParallelIterator, IntoParallelRefIterator, ParallelBridge, ParallelIterator,
 };
 use rspack_error::{
-  internal_error, CatchUnwindFuture, Diagnostic, Result, Severity, TWithDiagnosticArray,
+  internal_error, CatchUnwindFuture, Diagnostic, Error, InternalError, Result, Severity,
+  TWithDiagnosticArray,
 };
 use rspack_futures::FuturesResults;
 use rspack_hash::{RspackHash, RspackHashDigest};
@@ -23,7 +25,7 @@ use rspack_identifier::{Identifiable, IdentifierMap, IdentifierSet};
 use rspack_sources::{BoxSource, CachedSource, SourceExt};
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet, FxHasher};
 use swc_core::ecma::ast::ModuleItem;
-use tokio::sync::mpsc::error::TryRecvError;
+use tokio::sync::mpsc::{error::TryRecvError, unbounded_channel, UnboundedSender};
 use tracing::instrument;
 
 use super::{
@@ -37,16 +39,18 @@ use crate::{
   tree_shaking::{optimizer, visitor::SymbolRef, BailoutFlag, OptimizeDependencyResult},
   AddQueue, AddTask, AddTaskResult, AdditionalChunkRuntimeRequirementsArgs,
   AdditionalModuleRequirementsArgs, AsyncDependenciesBlock, BoxDependency, BoxModule, BuildQueue,
-  BuildTask, BuildTaskResult, CacheCount, CacheOptions, Chunk, ChunkByUkey, ChunkContentHash,
+  BuildTask, BuildTaskResult, BuildTimeExecutionOption, BuildTimeExecutionQueue,
+  BuildTimeExecutionTask, CacheCount, CacheOptions, Chunk, ChunkByUkey, ChunkContentHash,
   ChunkGraph, ChunkGroupByUkey, ChunkGroupUkey, ChunkHashArgs, ChunkKind, ChunkUkey, CleanQueue,
   CleanTask, CleanTaskResult, CodeGenerationResult, CodeGenerationResults, CompilationLogger,
-  CompilationLogging, CompilerOptions, ContentHashArgs, ContextDependency, DependencyId,
-  DependencyParents, DependencyType, Entry, EntryData, EntryOptions, Entrypoint, FactorizeQueue,
-  FactorizeTask, FactorizeTaskResult, Filename, Logger, Module, ModuleCreationCallback,
-  ModuleGraph, ModuleIdentifier, ModuleProfile, ModuleType, PathData, ProcessAssetsArgs,
-  ProcessDependenciesQueue, ProcessDependenciesResult, ProcessDependenciesTask, QueueHandler,
-  RenderManifestArgs, Resolve, ResolverFactory, RuntimeGlobals, RuntimeModule, RuntimeSpec,
-  SharedPluginDriver, SourceType, Stats, TaskResult, WorkerTask,
+  CompilationLogging, CompilerOptions, ContentHashArgs, ContextDependency, Dependency,
+  DependencyId, DependencyParents, DependencyType, Entry, EntryData, EntryOptions, Entrypoint,
+  FactorizeQueue, FactorizeTask, FactorizeTaskResult, Filename, LoaderImportDependency, Logger,
+  Module, ModuleCreationCallback, ModuleGraph, ModuleIdentifier, ModuleProfile, ModuleType,
+  PathData, ProcessAssetsArgs, ProcessDependenciesQueue, ProcessDependenciesResult,
+  ProcessDependenciesTask, QueueHandler, QueueTask, RenderManifestArgs, Resolve, ResolverFactory,
+  RuntimeGlobals, RuntimeModule, RuntimeSpec, SharedPluginDriver, SourceType, Stats,
+  SucceedModuleArgs, TaskResult, WorkerTask,
 };
 use crate::{tree_shaking::visitor::OptimizeAnalyzeResult, Context};
 
@@ -458,12 +462,14 @@ impl Compilation {
 
     let mut active_task_count = 0usize;
     let is_expected_shutdown = Arc::new(AtomicBool::new(false));
+
     let (result_tx, mut result_rx) = tokio::sync::mpsc::unbounded_channel::<Result<TaskResult>>();
 
     let mut factorize_queue = FactorizeQueue::new();
     let mut add_queue = AddQueue::new();
     let mut build_queue = BuildQueue::new();
     let mut process_dependencies_queue = ProcessDependenciesQueue::new();
+    let mut buildtime_execution_queue = BuildTimeExecutionQueue::new();
 
     let mut make_failed_dependencies: HashSet<BuildDependency> = HashSet::default();
     let mut make_failed_module = HashSet::default();
@@ -513,6 +519,7 @@ impl Compilation {
     let mut process_deps_time = logger.time_aggregate("module process dependencies task");
     let mut factorize_time = logger.time_aggregate("module factorize task");
     let mut build_time = logger.time_aggregate("module build task");
+    let mut buildtime_execution_time = logger.time_aggregate("buildtime execution task");
 
     let mut build_cache_counter = None;
     let mut factorize_cache_counter = None;
@@ -522,6 +529,12 @@ impl Compilation {
       factorize_cache_counter = Some(logger.cache("module factorize cache"));
     }
 
+    // use dependency_id to track importModule entry
+    // let mut loader_import_modules: HashMap<DependencyId, BuildTimeExecutionModuleInfo> =
+    //   Default::default();
+    // let mut modules_tobe_done: HashMap<DependencyId, HashSet<ModuleIdentifier>> =
+    //   Default::default();
+
     tokio::task::block_in_place(|| loop {
       let start = factorize_time.start();
       processor.try_process(
@@ -530,13 +543,14 @@ impl Compilation {
         &mut add_queue,
         &mut build_queue,
         &mut process_dependencies_queue,
+        &mut buildtime_execution_queue,
       );
 
       while let Some(task) = factorize_queue.get_task() {
+        active_task_count += 1;
         tokio::spawn({
           let result_tx = result_tx.clone();
           let is_expected_shutdown = is_expected_shutdown.clone();
-          active_task_count += 1;
 
           async move {
             if is_expected_shutdown.load(Ordering::SeqCst) {
@@ -565,10 +579,10 @@ impl Compilation {
 
       let start = build_time.start();
       while let Some(task) = build_queue.get_task() {
+        active_task_count += 1;
         tokio::spawn({
           let result_tx = result_tx.clone();
           let is_expected_shutdown = is_expected_shutdown.clone();
-          active_task_count += 1;
 
           async move {
             if is_expected_shutdown.load(Ordering::SeqCst) {
@@ -692,6 +706,67 @@ impl Compilation {
       }
       process_deps_time.end(start);
 
+      let start = buildtime_execution_time.start();
+      while let Some(task) = buildtime_execution_queue.get_task() {
+        let BuildTimeExecutionTask {
+          module,
+          options,
+          sender,
+        } = task;
+
+        if let Err(e) = self.execute_module(module, options, sender.clone()) {
+          result_tx
+            .send(Err(e))
+            .expect("failed to send error message");
+        };
+        // match task {
+        //   BuildTimeExecutionTask::Bootstrap(BuildTimeExecutionBootstrap {
+        //     request,
+        //     sender,
+        //     original_module_identifier,
+        //     original_module_context,
+        //     options,
+        //   }) => {
+        //     let dep = LoaderImportDependency::new(request);
+        //     let dep_id = *dep.id();
+
+        //     if let Err(e) = self
+        //       .plugin_driver
+        //       .prepare_execute_module(*dep.id(), &options, sender)
+        //     {
+        //       result_tx.send(Err(e)).expect("Failed to send error result");
+        //     }
+
+        //     self.module_graph.add_dependency(Box::new(dep));
+
+        //     self.handle_module_creation(
+        //       &mut factorize_queue,
+        //       original_module_identifier,
+        //       original_module_context,
+        //       vec![dep_id],
+        //       false,
+        //       None,
+        //       Some(true),
+        //       Some(Box::new(self.options.resolve.clone())),
+        //       Default::default(),
+        //       None,
+        //     );
+        //   }
+        //   BuildTimeExecutionTask::Ready(BuildTimeExecutionReady {
+        //     sender,
+        //     options,
+        //     module,
+        //   }) => {
+        //     if let Err(e) = self.execute_module(module, options, sender.clone()) {
+        //       result_tx
+        //         .send(Err(e))
+        //         .expect("failed to send error message");
+        //     };
+        //   }
+        // }
+      }
+      buildtime_execution_time.end(start);
+
       match result_rx.try_recv() {
         Ok(item) => {
           if let Ok(item) = &item {
@@ -749,7 +824,8 @@ impl Compilation {
                 }
               }
 
-              let module_identifier = factory_result.module.identifier();
+              let module_identifier: rspack_identifier::Identifier =
+                factory_result.module.identifier();
 
               tracing::trace!("Module created: {}", &module_identifier);
               if !diagnostics.is_empty() {
@@ -819,6 +895,8 @@ impl Compilation {
                 current_profile,
                 from_cache,
               } = task_result;
+
+              let result_clone = build_result.clone();
 
               if let Some(counter) = &mut build_cache_counter {
                 if from_cache {
@@ -905,7 +983,7 @@ impl Compilation {
               }
 
               {
-                let mgm = self
+                let mgm: &mut crate::ModuleGraphModule = self
                   .module_graph
                   .module_graph_module_by_identifier_mut(&module.identifier())
                   .expect("Failed to get mgm");
@@ -924,7 +1002,25 @@ impl Compilation {
                 build_result.build_info,
                 build_result.build_meta,
               );
+
+              let module_id = module.identifier();
               self.module_graph.add_module(module);
+
+              tokio::runtime::Handle::current().block_on(async {
+                let module = self
+                  .module_graph
+                  .module_by_identifier(&module_id)
+                  .expect("have module");
+                let args = SucceedModuleArgs {
+                  module,
+                  build_result: &result_clone,
+                };
+                self
+                  .plugin_driver
+                  .succeed_module(&args)
+                  .await
+                  .expect("failed to invoke succeed_module");
+              });
             }
             Ok(TaskResult::ProcessDependencies(task_result)) => {
               tracing::trace!(
@@ -1025,8 +1121,6 @@ impl Compilation {
         })
     };
 
-    // dbg!(&self.module_graph.module_identifier_to_module_graph_module);
-
     // add context module and context element module to bailout_module_identifiers
     if self.options.builtins.tree_shaking.enable() {
       self.bailout_module_identifiers = self
@@ -1091,6 +1185,7 @@ impl Compilation {
     callback: Option<ModuleCreationCallback>,
   ) {
     let current_profile = self.options.profile.then(Box::<ModuleProfile>::default);
+
     queue.add_task(FactorizeTask {
       original_module_identifier,
       issuer,
@@ -1113,8 +1208,10 @@ impl Compilation {
   }
 
   #[instrument(name = "compilation:code_generation", skip(self))]
-  async fn code_generation(&mut self) -> Result<()> {
+  fn code_generation(&mut self) -> Result<()> {
     let logger = self.get_logger("rspack.Compilation");
+    let mut code_generation_results = std::mem::take(&mut self.code_generation_results);
+
     let mut codegen_cache_counter = match self.options.cache {
       CacheOptions::Disabled => None,
       _ => Some(logger.cache("module code generation cache")),
@@ -1122,6 +1219,7 @@ impl Compilation {
 
     fn run_iteration(
       compilation: &mut Compilation,
+      code_generation_results: &mut CodeGenerationResults,
       codegen_cache_counter: &mut Option<CacheCount>,
       filter_op: impl Fn(&(&ModuleIdentifier, &Box<dyn Module>)) -> bool + Sync + Send,
     ) -> Result<()> {
@@ -1129,98 +1227,133 @@ impl Compilation {
       // Else, share same codegen result for all runtimes.
       let used_exports_optimization = compilation.options.is_new_tree_shaking()
         && compilation.options.optimization.used_exports.is_true();
-      let results = compilation
-        .module_graph
-        .modules()
-        .par_iter()
-        .filter(filter_op)
-        .filter_map(|(module_identifier, module)| {
-          let runtimes = compilation
-            .chunk_graph
-            .get_module_runtimes(*module_identifier, &compilation.chunk_by_ukey);
-          if runtimes.is_empty() {
-            return None;
-          }
 
-          let res = compilation
-            .cache
-            .code_generate_occasion
-            .use_cache(module, runtimes, compilation, |module, runtimes| {
-              let take_length = if used_exports_optimization {
-                runtimes.len()
-              } else {
-                // Only codegen once
-                1
-              };
-              let mut codegen_list = vec![];
-              for runtime in runtimes.into_values().take(take_length) {
-                codegen_list.push((
-                  module.code_generation(compilation, Some(&runtime))?,
-                  runtime,
-                ));
-              }
-              Ok(codegen_list)
-            })
-            .map(|(result, from_cache)| (*module_identifier, result, from_cache));
-          Some(res)
-        })
-        .collect::<Result<
-          Vec<(
-            ModuleIdentifier,
-            Vec<(CodeGenerationResult, RuntimeSpec)>,
-            bool,
-          )>,
-        >>()?;
-      results
-        .into_iter()
-        .for_each(|(module_identifier, item, from_cache)| {
-          item.into_iter().for_each(|(result, runtime)| {
-            if let Some(counter) = codegen_cache_counter {
-              if from_cache {
-                counter.hit();
-              } else {
-                counter.miss();
-              }
-            }
-            compilation.code_generated_modules.insert(module_identifier);
+      let results = compilation.code_generation_modules(
+        &compilation.chunk_graph,
+        codegen_cache_counter,
+        used_exports_optimization,
+        code_generation_results,
+        compilation
+          .module_graph
+          .modules()
+          .iter()
+          .filter(filter_op)
+          .map(|(id, _)| *id)
+          .par_bridge(),
+      )?;
 
-            let runtimes = compilation
-              .chunk_graph
-              .get_module_runtimes(module_identifier, &compilation.chunk_by_ukey);
-            let result_id = result.id;
-            compilation
-              .code_generation_results
-              .module_generation_result_map
-              .insert(result.id, result);
-            if used_exports_optimization {
-              compilation
-                .code_generation_results
-                .add(module_identifier, runtime, result_id);
-            } else {
-              for runtime in runtimes.into_values() {
-                compilation
-                  .code_generation_results
-                  .add(module_identifier, runtime, result_id);
-              }
-            }
-          })
-        });
+      for module in results {
+        compilation.code_generated_modules.insert(module);
+      }
+
       Ok(())
     }
 
-    run_iteration(self, &mut codegen_cache_counter, |(_, module)| {
-      module.get_code_generation_dependencies().is_none()
-    })?;
+    run_iteration(
+      self,
+      &mut code_generation_results,
+      &mut codegen_cache_counter,
+      |(_, module)| module.get_code_generation_dependencies().is_none(),
+    )?;
 
-    run_iteration(self, &mut codegen_cache_counter, |(_, module)| {
-      module.get_code_generation_dependencies().is_some()
-    })?;
+    run_iteration(
+      self,
+      &mut code_generation_results,
+      &mut codegen_cache_counter,
+      |(_, module)| module.get_code_generation_dependencies().is_some(),
+    )?;
+
+    self.code_generation_results = code_generation_results;
 
     if let Some(counter) = codegen_cache_counter {
       logger.cache_end(counter);
     }
 
     Ok(())
+  }
+
+  fn code_generation_modules(
+    &self,
+    chunk_graph: &ChunkGraph,
+    codegen_cache_counter: &mut Option<CacheCount>,
+    used_exports_optimization: bool,
+    code_generation_results: &mut CodeGenerationResults,
+    modules: impl ParallelIterator<Item = ModuleIdentifier>,
+  ) -> Result<Vec<ModuleIdentifier>> {
+    #[allow(clippy::type_complexity)]
+    let results: Vec<(
+      rspack_identifier::Identifier,
+      Vec<(
+        CodeGenerationResult,
+        std::collections::HashSet<Arc<str>, BuildHasherDefault<FxHasher>>,
+      )>,
+      bool,
+    )> = modules
+      .filter_map(|module_identifier| {
+        let runtimes = chunk_graph.get_module_runtimes(module_identifier, &self.chunk_by_ukey);
+        if runtimes.is_empty() {
+          return None;
+        }
+
+        let module = self
+          .module_graph
+          .module_by_identifier(&module_identifier)
+          .expect("module should exist");
+        let res = self
+          .cache
+          .code_generate_occasion
+          .use_cache(module, runtimes, self, |module, runtimes| {
+            let take_length = if used_exports_optimization {
+              runtimes.len()
+            } else {
+              // Only codegen once
+              1
+            };
+            let mut codegen_list = vec![];
+            for runtime in runtimes.into_values().take(take_length) {
+              codegen_list.push((module.code_generation(self, Some(&runtime))?, runtime));
+            }
+            Ok(codegen_list)
+          })
+          .map(|(result, from_cache)| (module_identifier, result, from_cache));
+        Some(res)
+      })
+      .collect::<Result<
+        Vec<(
+          ModuleIdentifier,
+          Vec<(CodeGenerationResult, RuntimeSpec)>,
+          bool,
+        )>,
+      >>()?;
+    let results = results
+      .into_iter()
+      .map(|(module_identifier, item, from_cache)| {
+        item.into_iter().for_each(|(result, runtime)| {
+          if let Some(counter) = codegen_cache_counter {
+            if from_cache {
+              counter.hit();
+            } else {
+              counter.miss();
+            }
+          }
+
+          let runtimes = chunk_graph.get_module_runtimes(module_identifier, &self.chunk_by_ukey);
+          let result_id = result.id;
+          code_generation_results
+            .module_generation_result_map
+            .insert(result.id, result);
+          if used_exports_optimization {
+            code_generation_results.add(module_identifier, runtime, result_id);
+          } else {
+            for runtime in runtimes.into_values() {
+              code_generation_results.add(module_identifier, runtime, result_id);
+            }
+          }
+        });
+        module_identifier
+      });
+
+    Ok(results.collect())
   }
 
   #[instrument(skip_all)]
@@ -1383,28 +1516,26 @@ impl Compilation {
     logger.time_end(start);
 
     let start = logger.time("code generation");
-    self.code_generation().await?;
+    self.code_generation()?;
     logger.time_end(start);
 
     let start = logger.time("runtime requirements");
-    self
-      .process_runtime_requirements(
-        self
-          .module_graph
-          .modules()
-          .keys()
-          .copied()
-          .collect::<Vec<_>>(),
-        self
-          .chunk_by_ukey
-          .keys()
-          .copied()
-          .collect::<Vec<_>>()
-          .into_iter(),
-        self.get_chunk_graph_entries().into_iter(),
-        plugin_driver.clone(),
-      )
-      .await?;
+    self.process_runtime_requirements(
+      self
+        .module_graph
+        .modules()
+        .keys()
+        .copied()
+        .collect::<Vec<_>>(),
+      self
+        .chunk_by_ukey
+        .keys()
+        .copied()
+        .collect::<Vec<_>>()
+        .into_iter(),
+      self.get_chunk_graph_entries().into_iter(),
+      plugin_driver.clone(),
+    )?;
     logger.time_end(start);
 
     let start = logger.time("hashing");
@@ -1440,8 +1571,8 @@ impl Compilation {
     HashSet::from_iter(entries.chain(async_entries))
   }
 
-  #[instrument(name = "compilation:process_runtime_requirements", skip_all)]
-  pub async fn process_runtime_requirements(
+  #[allow(clippy::unwrap_in_result)]
+  pub fn process_runtime_requirements(
     &mut self,
     modules: impl IntoParallelIterator<Item = ModuleIdentifier>,
     chunks: impl Iterator<Item = ChunkUkey>,
@@ -1800,12 +1931,293 @@ impl Compilation {
     CompilationLogger::new(name.into(), self.logging.clone())
   }
 
-  pub fn execute_module(&self, entry: ModuleIdentifier) -> Result<Option<String>> {
-    let codegen_result = Default::default();
-    // TODO
-    self
-      .plugin_driver
-      .execute_module(entry, vec![], &codegen_result)
+  #[allow(clippy::unwrap_in_result)]
+  pub fn execute_module(
+    &mut self,
+    module: ModuleIdentifier,
+    options: BuildTimeExecutionOption,
+    result_tx: UnboundedSender<Result<String>>,
+  ) -> Result<()> {
+    let mut modules: std::collections::HashSet<
+      rspack_identifier::Identifier,
+      BuildHasherDefault<FxHasher>,
+    > = HashSet::default();
+    let mut queue = vec![module];
+
+    while let Some(m) = queue.pop() {
+      modules.insert(m);
+      let m = self
+        .module_graph
+        .module_by_identifier(&m)
+        .expect("should have module");
+      for m in self.module_graph.get_outgoing_connections(m) {
+        queue.push(m.module_identifier);
+      }
+    }
+
+    let mut chunk_graph = ChunkGraph::default();
+
+    let mut chunk = Chunk::new(Some("build time chunk".into()), ChunkKind::Normal);
+
+    chunk.id = chunk.name.clone();
+    chunk.ids = vec![chunk.id.clone().expect("id is set")];
+    let runtime = {
+      let mut runtime = HashSet::default();
+      runtime.insert("build time".into());
+      runtime
+    };
+
+    chunk.runtime = runtime.clone();
+
+    let mut entrypoint = Entrypoint::new(
+      crate::ChunkGroupKind::Entrypoint {
+        initial: true,
+        options: Box::new(EntryOptions {
+          name: Some("build time".into()),
+          runtime: Some("runtime".into()),
+          chunk_loading: Some(crate::ChunkLoading::Disable),
+          async_chunks: None,
+          public_path: options.public_path.map(crate::PublicPath::String),
+          base_uri: options.base_uri,
+          filename: None,
+          library: None,
+        }),
+      },
+      crate::ChunkGroupInfo {
+        chunk_loading: false,
+        async_chunks: false,
+        runtime: runtime.clone(),
+      },
+    );
+
+    // add chunk to this compilation
+    let chunk_by_ukey = ChunkByUkey::default();
+    let old_chunk_by_ukey = std::mem::replace(&mut self.chunk_by_ukey, chunk_by_ukey);
+
+    let chunk = self.chunk_by_ukey.add(chunk);
+    let chunk_ukey = chunk.ukey;
+
+    chunk_graph.connect_chunk_and_entry_module(chunk.ukey, module, entrypoint.ukey);
+    entrypoint.connect_chunk(chunk);
+    entrypoint.set_runtime_chunk(chunk.ukey);
+    entrypoint.set_entry_point_chunk(chunk.ukey);
+
+    let entry_ukey = entrypoint.ukey;
+    self.chunk_group_by_ukey.add(entrypoint);
+    let old_bailout_module_identifiers = std::mem::replace(
+      &mut self.bailout_module_identifiers,
+      modules
+        .iter()
+        .cloned()
+        .map(|i| (i, BailoutFlag::BUILDTIME_EXECUTION))
+        .collect(),
+    );
+
+    // Assign ids to modules and modules to the chunk
+    for m in &modules {
+      let module = self
+        .module_graph
+        .module_by_identifier(m)
+        .expect("should have module");
+
+      let id = module.identifier();
+
+      chunk_graph.add_module(id);
+      chunk_graph.set_module_id(*m, id.to_string());
+      chunk_graph.connect_chunk_and_module(chunk_ukey, *m);
+    }
+
+    self.include_module_ids.extend(modules.iter().cloned());
+
+    let mut codegen_results = Default::default();
+
+    // @JserFeng: the webpack uses this trick to make sure process_runtime_requirements access
+    // the new chunk_graph
+    // in rspack, if we decouple compilation and chunk_graph, we can't get exclusive ref
+    // to the chunk_graph in API that receives both compilation and chunk_graph
+    //
+    // replace code_generation_results is the same reason
+    let old_chunk_graph = std::mem::replace(&mut self.chunk_graph, chunk_graph);
+
+    self.code_generation_modules(
+      &self.chunk_graph,
+      &mut None,
+      false,
+      &mut codegen_results,
+      modules.par_iter().copied(),
+    )?;
+
+    let old_codegen_results = std::mem::replace(&mut self.code_generation_results, codegen_results);
+    self.process_runtime_requirements(
+      modules.clone(),
+      once(chunk_ukey),
+      once(chunk_ukey),
+      self.plugin_driver.clone(),
+    )?;
+
+    let runtime_modules = self
+      .chunk_graph
+      .get_chunk_runtime_modules_iterable(&chunk_ukey)
+      .copied()
+      .collect::<HashSet<ModuleIdentifier>>();
+
+    // restore code_generation_results and chunk_graph
+    let mut codegen_results =
+      std::mem::replace(&mut self.code_generation_results, old_codegen_results);
+    self.chunk_graph = old_chunk_graph;
+
+    for runtime_id in &runtime_modules {
+      let runtime_module = self
+        .runtime_modules
+        .get(runtime_id)
+        .expect("runtime module exist");
+
+      let result = CodeGenerationResult::default().with_javascript(runtime_module.generate(self));
+      let result_id = result.id;
+
+      codegen_results
+        .module_generation_result_map
+        .insert(result.id, result);
+      codegen_results.add(*runtime_id, runtime.clone(), result_id);
+    }
+
+    // we add a new fake chunk in the above step, remove it
+    self.chunk_by_ukey = old_chunk_by_ukey;
+    self.chunk_group_by_ukey.remove(&entry_ukey);
+    self.bailout_module_identifiers = old_bailout_module_identifiers;
+
+    let result = self.plugin_driver.execute_module(
+      module,
+      runtime_modules.into_iter().collect(),
+      &codegen_results,
+    );
+
+    result_tx
+      .send(
+        result
+          .map(|result| result.expect("Cannot use executeModule while no js runner registered")),
+      )
+      .map_err(|err| {
+        Error::InternalError(InternalError::new(
+          format!("Failed to invoke importModule: {}", err),
+          Severity::Error,
+        ))
+      })
+  }
+
+  pub async fn import_module(
+    &self,
+    request: String,
+    public_path: Option<String>,
+    base_uri: Option<String>,
+    original_module_identifier: Option<ModuleIdentifier>,
+    original_module_context: Option<Box<Context>>,
+  ) -> Result<String> {
+    let (tx, mut rx) = unbounded_channel::<(ModuleIdentifier, bool)>();
+
+    let dep = LoaderImportDependency::new(request);
+    let dep_id = *dep.id();
+
+    let tx_clone = tx.clone();
+
+    let queue_handler = self
+      .queue_handle
+      .clone()
+      .expect("Call importModule without queueHandler, please file an issue at https://github.com/web-infra-dev/rspack/issues");
+
+    queue_handler.add_task(crate::QueueTask::Factorize(Box::new(FactorizeTask {
+      original_module_identifier,
+      original_module_context,
+      issuer: None,
+      dependency: Box::new(dep),
+      dependencies: vec![dep_id],
+      is_entry: false,
+      module_type: Some(ModuleType::Js),
+      side_effects: Some(true),
+      resolve_options: None,
+      resolver_factory: self.resolver_factory.clone(),
+      loader_resolver_factory: self.resolver_factory.clone(),
+      options: self.options.clone(),
+      lazy_visit_modules: Default::default(),
+      plugin_driver: self.plugin_driver.clone(),
+      cache: self.cache.clone(),
+      current_profile: None,
+      callback: Some(Box::new(move |m| {
+        tx_clone
+          .send((m.identifier(), false))
+          .expect("failed to send entry module of buildtime execution modules")
+      })),
+    })));
+
+    let mut to_be_completed = 1;
+    let mut completed = 0;
+    let mut waited = vec![];
+    let mut modules = HashSet::default();
+
+    let mut entry = None;
+
+    // wait for every child to be built
+    loop {
+      if let Some((module, finish)) = rx.recv().await {
+        if finish {
+          completed += 1;
+          modules.insert(module);
+          if entry.is_none() {
+            entry = Some(module);
+          }
+        } else if !modules.contains(&module) {
+          // prevent circle
+          to_be_completed += 1;
+          waited.push(module);
+        }
+
+        while let Some(module) = waited.pop() {
+          let tx_clone = tx.clone();
+
+          queue_handler.wait_for(
+            module.to_string(),
+            crate::TaskCategory::ProcessDependencies,
+            Box::new(move |module, compilation| {
+              let m = compilation
+                .module_graph
+                .module_by_identifier(&module)
+                .expect("todo");
+
+              tx_clone.send((module, true)).expect("todo");
+
+              for conn in compilation.module_graph.get_outgoing_connections(m) {
+                tx_clone
+                  .send((conn.module_identifier, false))
+                  .expect("todo");
+              }
+            }),
+          );
+        }
+      }
+
+      if to_be_completed == completed {
+        break;
+      }
+    }
+
+    let (tx, mut rx) = unbounded_channel();
+
+    queue_handler.add_task(QueueTask::BuildTimeExecution(Box::new(
+      BuildTimeExecutionTask {
+        module: entry.expect("should has entry module"),
+        options: BuildTimeExecutionOption {
+          public_path,
+          base_uri,
+        },
+        sender: tx,
+      },
+    )));
+
+    rx.recv().await.unwrap_or_else(|| {
+      Err(rspack_error::internal_error!(
+        "failed on calling importModule at execution stage"
+      ))
+    })
   }
 }
 

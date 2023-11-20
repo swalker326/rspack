@@ -127,7 +127,7 @@ impl ChunkGraph {
     module_identifier: ModuleIdentifier,
     chunk_by_ukey: &ChunkByUkey,
   ) -> RuntimeSpecSet {
-    let cgm = self.get_chunk_graph_module(module_identifier);
+    let cgm: &ChunkGraphModule = self.get_chunk_graph_module(module_identifier);
     let mut runtimes = RuntimeSpecSet::default();
     for chunk_ukey in cgm.chunks.iter() {
       let chunk = chunk_by_ukey.get(chunk_ukey).expect("Chunk should exist");

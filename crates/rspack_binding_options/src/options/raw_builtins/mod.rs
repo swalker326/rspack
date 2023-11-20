@@ -226,13 +226,16 @@ impl RawOptionsApply for BuiltinPlugin {
         provides.sort_unstable_by_key(|(k, _)| k.to_string());
         plugins.push(ProvideSharedPlugin::new(provides).boxed())
       }
-
       BuiltinPluginName::ConsumeSharedPlugin => {
         let consumes: Vec<_> = downcast_into::<Vec<RawConsumeOptions>>(self.options)?
+          .into_iter()
           .map(Into::into)
           .collect();
-        plugins.push(ConsumeSharedPlugin::new(consumes).boxed());
+        plugins.push(ConsumeSharedPlugin::new(consumes).boxed())
+      }
 
+      // rspack specific plugins
+      BuiltinPluginName::HttpExternalsRspackPlugin => {
         let plugin_options = downcast_into::<RawHttpExternalsRspackPluginOptions>(self.options)?;
         let plugin = http_externals_rspack_plugin(plugin_options.css, plugin_options.web_async);
         plugins.push(plugin);

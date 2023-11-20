@@ -97,6 +97,7 @@ async fn loader_test(actual: impl AsRef<Path>, expected: impl AsRef<Path>) {
       resolver_factory: Default::default(),
       module: None,
       module_context: None,
+      task_sender: None,
     },
   )
   .await
