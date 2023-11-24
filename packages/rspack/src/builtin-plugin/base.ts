@@ -26,6 +26,7 @@ export enum BuiltinPluginName {
 	LimitChunkCountPlugin = "LimitChunkCountPlugin",
 	WebWorkerTemplatePlugin = "WebWorkerTemplatePlugin",
 	MergeDuplicateChunksPlugin = "MergeDuplicateChunksPlugin",
+<<<<<<< HEAD
 	SplitChunksPlugin = "SplitChunksPlugin",
 	OldSplitChunksPlugin = "OldSplitChunksPlugin",
 	ContainerPlugin = "ContainerPlugin",
@@ -33,6 +34,11 @@ export enum BuiltinPluginName {
 	ModuleFederationRuntimePlugin = "ModuleFederationRuntimePlugin",
 	ProvideSharedPlugin = "ProvideSharedPlugin",
 	ConsumeSharedPlugin = "ConsumeSharedPlugin"
+=======
+	ContainerPlugin = "ContainerPlugin",
+	SplitChunksPlugin = "SplitChunksPlugin",
+	OldSplitChunksPlugin = "OldSplitChunksPlugin"
+>>>>>>> a96a7b058 (fix: only register `SplitChunkPlugin` once (#4766))
 }
 
 export abstract class RspackBuiltinPlugin implements RspackPluginInstance {
