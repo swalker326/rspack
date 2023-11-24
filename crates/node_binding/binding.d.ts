@@ -145,15 +145,10 @@ export const enum BuiltinPluginName {
   SplitChunksPlugin = 'SplitChunksPlugin',
   OldSplitChunksPlugin = 'OldSplitChunksPlugin',
   ContainerPlugin = 'ContainerPlugin',
-<<<<<<< HEAD
   ContainerReferencePlugin = 'ContainerReferencePlugin',
   ModuleFederationRuntimePlugin = 'ModuleFederationRuntimePlugin',
   ProvideSharedPlugin = 'ProvideSharedPlugin',
   ConsumeSharedPlugin = 'ConsumeSharedPlugin',
-=======
-  SplitChunksPlugin = 'SplitChunksPlugin',
-  OldSplitChunksPlugin = 'OldSplitChunksPlugin',
->>>>>>> a96a7b058 (fix: only register `SplitChunkPlugin` once (#4766))
   HttpExternalsRspackPlugin = 'HttpExternalsRspackPlugin',
   CopyRspackPlugin = 'CopyRspackPlugin',
   HtmlRspackPlugin = 'HtmlRspackPlugin',

@@ -525,7 +525,10 @@ impl<'a> CodeSizeOptimizer<'a> {
               | DependencyType::CjsRequire
               | DependencyType::ImportContext
               | DependencyType::ContainerExposed
+<<<<<<< HEAD
               | DependencyType::ProvideModuleForShared
+=======
+>>>>>>> c30ae9213 (feat: Module Federation, part 2, ContainerReferencePlugin (#4735))
           );
 
           if self.side_effects_free_modules.contains(module_identifier)

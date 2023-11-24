@@ -30,8 +30,17 @@ export class ContainerReferencePlugin extends RspackBuiltinPlugin {
 	name = BuiltinPluginName.ContainerReferencePlugin;
 	_options: RawContainerReferencePluginOptions;
 	_remotes;
+<<<<<<< HEAD
 
 	constructor(options: ContainerReferencePluginOptions) {
+=======
+	_mfRuntimePlugin: [boolean, ModuleFederationRuntimePlugin];
+
+	constructor(
+		options: ContainerReferencePluginOptions,
+		mfRuntimePlugin?: ModuleFederationRuntimePlugin
+	) {
+>>>>>>> c30ae9213 (feat: Module Federation, part 2, ContainerReferencePlugin (#4735))
 		super();
 		this._remotes = parseOptions(
 			options.remotes,
@@ -50,6 +59,13 @@ export class ContainerReferencePlugin extends RspackBuiltinPlugin {
 			remoteType: options.remoteType,
 			remotes: this._remotes.map(([key, r]) => ({ key, ...r }))
 		};
+<<<<<<< HEAD
+=======
+		this._mfRuntimePlugin = [
+			!isNil(mfRuntimePlugin),
+			mfRuntimePlugin ?? new ModuleFederationRuntimePlugin()
+		];
+>>>>>>> c30ae9213 (feat: Module Federation, part 2, ContainerReferencePlugin (#4735))
 	}
 
 	raw(compiler: Compiler): BuiltinPlugin {
@@ -66,6 +82,7 @@ export class ContainerReferencePlugin extends RspackBuiltinPlugin {
 			}
 		}
 		new ExternalsPlugin(remoteType, remoteExternals).apply(compiler);
+<<<<<<< HEAD
 		ModuleFederationRuntimePlugin.addPlugin(
 			compiler,
 			require.resolve("../sharing/initializeSharing.js")
@@ -74,6 +91,16 @@ export class ContainerReferencePlugin extends RspackBuiltinPlugin {
 			compiler,
 			require.resolve("./remotesLoading.js")
 		);
+=======
+		const [injected, mfRuntimePlugin] = this._mfRuntimePlugin;
+		mfRuntimePlugin.addPlugin(
+			require.resolve("../sharing/initializeSharing.js")
+		);
+		mfRuntimePlugin.addPlugin(require.resolve("./remotesLoading.js"));
+		if (!injected) {
+			mfRuntimePlugin.apply(compiler);
+		}
+>>>>>>> c30ae9213 (feat: Module Federation, part 2, ContainerReferencePlugin (#4735))
 
 		return {
 			name: this.name as any,

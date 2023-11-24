@@ -190,11 +190,7 @@ import rawModule from './raw.png';
   "errors": [],
   "errorsCount": 0,
   "filteredModules": undefined,
-<<<<<<< HEAD
   "hash": "62ac3b1146fb1565fbd4",
-=======
-  "hash": "e39918359c4433621683",
->>>>>>> 2ae7eb57e (fix: flag side effects plugin update dep (#4747))
   "logging": {},
   "modules": [
     {
@@ -384,11 +380,7 @@ chunk {main} bundle.js (main) [entry]
   esm import ./stringModule [10]
 webpack/runtime/public_path {main}
 webpack/runtime/make_namespace_object {main}
-<<<<<<< HEAD
 Rspack compiled successfully (62ac3b1146fb1565fbd4)"
-=======
-Rspack compiled successfully (e39918359c4433621683)"
->>>>>>> 2ae7eb57e (fix: flag side effects plugin update dep (#4747))
 `;
 
 exports[`StatsTestCases should print correct stats for filename 1`] = `
@@ -6127,11 +6119,7 @@ import rawModule from './raw.png';
   "errors": [],
   "errorsCount": 0,
   "filteredModules": undefined,
-<<<<<<< HEAD
   "hash": "7a6e65b1aedebf8e24aa",
-=======
-  "hash": "22f9734c6c6aa6e0afd5",
->>>>>>> 2ae7eb57e (fix: flag side effects plugin update dep (#4747))
   "logging": {},
   "modules": [
     {
@@ -6337,11 +6325,7 @@ runtime modules 4 modules
 ./raw.png
 ./index.js
 ./stringModule.js
-<<<<<<< HEAD
 Rspack compiled successfully (7a6e65b1aedebf8e24aa)"
-=======
-Rspack compiled successfully (22f9734c6c6aa6e0afd5)"
->>>>>>> 2ae7eb57e (fix: flag side effects plugin update dep (#4747))
 `;
 
 exports[`StatsTestCases should print correct stats for stats-hooks 1`] = `
