@@ -175,15 +175,12 @@ impl<'me> CodeSplitter<'me> {
         .entry(entrypoint.ukey)
         .or_default()
         .extend(included_modules);
-<<<<<<< HEAD
 
       if let Some(name) = entrypoint.name() {
         self
           .named_chunk_groups
           .insert(name.to_string(), entrypoint.ukey);
       }
-=======
->>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
     }
 
     let mut runtime_chunks = HashSet::default();

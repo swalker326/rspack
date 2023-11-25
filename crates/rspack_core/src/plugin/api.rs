@@ -14,7 +14,8 @@ use crate::{
   NormalModule, NormalModuleAfterResolveArgs, NormalModuleBeforeResolveArgs,
   NormalModuleCreateData, NormalModuleFactoryContext, OptimizeChunksArgs, ParserAndGenerator,
   PluginContext, ProcessAssetsArgs, RenderArgs, RenderChunkArgs, RenderManifestArgs,
-  RenderModuleContentArgs, RenderStartupArgs, Resolver, SourceType, ThisCompilationArgs,
+  RenderModuleContentArgs, RenderStartupArgs, Resolver, SourceType, SucceedModuleArgs,
+  ThisCompilationArgs,
 };
 
 // use anyhow::{Context, Result};
@@ -445,7 +446,7 @@ pub trait Plugin: Debug + Send + Sync {
     Ok(())
   }
 
-  async fn succeed_module(&self, _module: &dyn Module) -> Result<()> {
+  async fn succeed_module(&self, _args: &SucceedModuleArgs<'_>) -> Result<()> {
     Ok(())
   }
 

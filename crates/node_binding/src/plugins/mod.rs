@@ -9,7 +9,9 @@ use rspack_binding_values::JsExecuteModuleArg;
 use rspack_binding_values::{AfterResolveData, JsChunkAssetArgs, JsModule};
 use rspack_binding_values::{BeforeResolveData, JsAssetEmittedArgs, ToJsModule};
 use rspack_binding_values::{JsResolveForSchemeInput, JsResolveForSchemeResult};
-use rspack_core::{ChunkAssetArgs, ModuleIdentifier, NormalModuleAfterResolveArgs};
+use rspack_core::{
+  ChunkAssetArgs, ModuleIdentifier, NormalModuleAfterResolveArgs, SucceedModuleArgs,
+};
 use rspack_core::{NormalModuleBeforeResolveArgs, PluginNormalModuleFactoryAfterResolveOutput};
 use rspack_core::{PluginNormalModuleFactoryBeforeResolveOutput, ResourceData};
 use rspack_core::{PluginNormalModuleFactoryResolveForSchemeOutput, PluginShouldEmitHookOutput};
@@ -733,11 +735,12 @@ impl rspack_core::Plugin for JsHooksAdapter {
       .map_err(|err| internal_error!("Failed to call after emit: {err}"))?
   }
 
-  async fn succeed_module(&self, args: &dyn rspack_core::Module) -> rspack_error::Result<()> {
+  async fn succeed_module(&self, args: &SucceedModuleArgs<'_>) -> rspack_error::Result<()> {
     if self.is_hook_disabled(&Hook::SucceedModule) {
       return Ok(());
     }
     let js_module = args
+      .module
       .to_js_module()
       .expect("Failed to convert module to JsModule");
     self

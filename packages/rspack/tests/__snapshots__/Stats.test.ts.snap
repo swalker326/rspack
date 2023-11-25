@@ -421,11 +421,7 @@ exports.c = require("./c?c=3");
   "errors": [],
   "errorsCount": 0,
   "filteredModules": undefined,
-<<<<<<< HEAD
   "hash": "7da8f62e8c5a2bdc7ca4",
-=======
-  "hash": "7822e64d828548d06a2f",
->>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
   "logging": {},
   "modules": [
     {

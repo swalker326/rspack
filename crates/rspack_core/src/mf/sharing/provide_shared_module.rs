@@ -40,7 +40,6 @@ impl ProvideSharedModule {
     request: String,
     eager: bool,
   ) -> Self {
-<<<<<<< HEAD
     let identifier = format!(
       "provide shared module ({}) {}@{} = {}",
       &share_scope, &name, &version, &request
@@ -51,20 +50,6 @@ impl ProvideSharedModule {
       identifier: ModuleIdentifier::from(identifier.clone()),
       lib_ident: format!("webpack/sharing/provide/{}/{}", &share_scope, &name),
       readable_identifier: identifier,
-=======
-    Self {
-      blocks: Vec::new(),
-      dependencies: Vec::new(),
-      identifier: ModuleIdentifier::from(format!(
-        "provide shared module ({}) {}@{} = {}",
-        &share_scope, &name, &version, &request
-      )),
-      lib_ident: format!("webpack/sharing/provide/{}/{}", &share_scope, &name),
-      readable_identifier: format!(
-        "provide shared module ({}) {}@{} = {}",
-        &share_scope, &name, &version, &request
-      ),
->>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
       name,
       share_scope,
       version,
@@ -105,11 +90,7 @@ impl Module for ProvideSharedModule {
   }
 
   fn module_type(&self) -> &ModuleType {
-<<<<<<< HEAD
     &ModuleType::ProvideShared
-=======
-    &ModuleType::Provide
->>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
   }
 
   fn source_types(&self) -> &[SourceType] {
@@ -142,11 +123,7 @@ impl Module for ProvideSharedModule {
     if self.eager {
       dependencies.push(dep as BoxDependency);
     } else {
-<<<<<<< HEAD
       let mut block = AsyncDependenciesBlock::new(self.identifier, "", None);
-=======
-      let mut block = AsyncDependenciesBlock::new(self.identifier, "");
->>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
       block.add_dependency(dep);
       blocks.push(block);
     }

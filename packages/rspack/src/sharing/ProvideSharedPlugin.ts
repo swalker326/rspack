@@ -1,13 +1,5 @@
 import { BuiltinPlugin, RawProvideOptions } from "@rspack/binding";
-<<<<<<< HEAD
 import { BuiltinPluginName, RspackBuiltinPlugin } from "../builtin-plugin/base";
-=======
-import {
-	BuiltinPluginName,
-	RspackBuiltinPlugin,
-	create
-} from "../builtin-plugin/base";
->>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
 import { parseOptions } from "../container/options";
 import { Compiler } from "../Compiler";
 import { ModuleFederationRuntimePlugin } from "../container/ModuleFederationRuntimePlugin";
@@ -59,11 +51,7 @@ export class ProvideSharedPlugin extends RspackBuiltinPlugin {
 	raw(compiler: Compiler): BuiltinPlugin {
 		ModuleFederationRuntimePlugin.addPlugin(
 			compiler,
-<<<<<<< HEAD
 			require.resolve("./initializeSharing.js")
-=======
-			require.resolve("../sharing/initializeSharing.js")
->>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
 		);
 		return {
 			name: this.name as any,

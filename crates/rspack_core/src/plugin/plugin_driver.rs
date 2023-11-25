@@ -24,7 +24,7 @@ use crate::{
   PluginRenderChunkHookOutput, PluginRenderHookOutput, PluginRenderManifestHookOutput,
   PluginRenderModuleContentOutput, PluginRenderStartupHookOutput, PluginThisCompilationHookOutput,
   ProcessAssetsArgs, RenderArgs, RenderChunkArgs, RenderManifestArgs, RenderModuleContentArgs,
-  RenderStartupArgs, Resolver, ResolverFactory, Stats, ThisCompilationArgs,
+  RenderStartupArgs, Resolver, ResolverFactory, Stats, SucceedModuleArgs, ThisCompilationArgs,
 };
 
 pub struct PluginDriver {
@@ -612,9 +612,9 @@ impl PluginDriver {
   }
 
   #[instrument(name = "plugin:succeed_module", skip_all)]
-  pub async fn succeed_module(&self, module: &dyn Module) -> Result<()> {
+  pub async fn succeed_module(&self, args: &SucceedModuleArgs<'_>) -> Result<()> {
     for plugin in &self.plugins {
-      plugin.succeed_module(module).await?;
+      plugin.succeed_module(args).await?;
     }
     Ok(())
   }

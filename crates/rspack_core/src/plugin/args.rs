@@ -7,9 +7,9 @@ use rspack_sources::BoxSource;
 use rustc_hash::FxHashSet as HashSet;
 
 use crate::{
-  Chunk, ChunkInitFragments, ChunkUkey, Compilation, Context, DependencyCategory, DependencyType,
-  ErrorSpan, FactoryMeta, ModuleDependency, ModuleGraphModule, ModuleIdentifier, Resolve,
-  RuntimeGlobals, SharedPluginDriver, Stats,
+  BoxModule, BuildResult, Chunk, ChunkInitFragments, ChunkUkey, Compilation, Context,
+  DependencyCategory, DependencyId, DependencyType, ErrorSpan, FactoryMeta, ModuleDependency,
+  ModuleGraphModule, ModuleIdentifier, Resolve, RuntimeGlobals, SharedPluginDriver, Stats,
 };
 
 #[derive(Debug)]
@@ -85,12 +85,10 @@ pub struct FactorizeArgs<'me> {
 #[derive(Debug, Clone)]
 pub struct NormalModuleCreateData<'a> {
   pub dependency_type: DependencyType,
+  pub dependency_id: DependencyId,
   pub resolve_data_request: &'a str,
   pub resource_resolve_data: ResourceData,
-<<<<<<< HEAD
   pub context: Context,
-=======
->>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
 }
 
 #[derive(Debug, Clone)]
@@ -253,4 +251,9 @@ impl<'me> JsChunkHashArgs<'me> {
       .get(self.chunk_ukey)
       .expect("chunk should exist in chunk_by_ukey")
   }
+}
+
+pub struct SucceedModuleArgs<'me> {
+  pub module: &'me BoxModule,
+  pub build_result: &'me BuildResult,
 }

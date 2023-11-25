@@ -71,19 +71,15 @@ describe("Stats", () => {
 		  │
 		2 │     return "This is b";
 		3 │ };
-		4 │ 
+		4 │
 		5 │ // Test CJS top-level return
 		6 │ return;
 		  │ ^^^^^^^ Return statement is not allowed here
-		7 │ 
+		7 │
 
 
 
-<<<<<<< HEAD
 		Rspack compiled with 1 error (9bed7a0c293db88bb175)"
-=======
-		Rspack compiled with 1 error (a57d43d912c94f9cf5f2)"
->>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
 	`);
 	});
 

@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
 use rspack_error::{Diagnostic, Result};
+use rustc_hash::FxHashMap;
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
 use crate::{
   cache::Cache, BoxDependency, BuildContext, BuildResult, Compilation, CompilerContext,
@@ -9,7 +11,7 @@ use crate::{
   ModuleProfile, ModuleType, NormalModuleFactory, NormalModuleFactoryContext, Resolve,
   ResolverFactory, SharedPluginDriver, WorkerQueue,
 };
-use crate::{BoxModule, DependencyId, ExportInfo, ExportsInfo, UsageState};
+use crate::{BoxModule, DependencyId, ExportInfo, ExportsInfo, SucceedModuleArgs, UsageState};
 
 #[derive(Debug)]
 pub enum TaskResult {
@@ -44,6 +46,32 @@ pub struct FactorizeTask {
   pub callback: Option<ModuleCreationCallback>,
 }
 
+impl std::fmt::Debug for FactorizeTask {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("FactorizeTask")
+      .field(
+        "original_module_identifier",
+        &self.original_module_identifier,
+      )
+      .field("original_module_context", &self.original_module_context)
+      .field("issuer", &self.issuer)
+      .field("dependency", &self.dependency)
+      .field("dependencies", &self.dependencies)
+      .field("is_entry", &self.is_entry)
+      .field("module_type", &self.module_type)
+      .field("side_effects", &self.side_effects)
+      .field("resolve_options", &self.resolve_options)
+      .field("resolver_factory", &self.resolver_factory)
+      .field("loader_resolver_factory", &self.loader_resolver_factory)
+      .field("options", &self.options)
+      .field("lazy_visit_modules", &self.lazy_visit_modules)
+      .field("plugin_driver", &self.plugin_driver)
+      .field("cache", &self.cache)
+      .field("current_profile", &self.current_profile)
+      .finish()
+  }
+}
+
 /// a struct temporarily used creating ExportsInfo
 #[derive(Debug)]
 pub struct ExportsInfoRelated {
@@ -53,6 +81,7 @@ pub struct ExportsInfoRelated {
 }
 
 pub struct FactorizeTaskResult {
+  pub dependency: DependencyId,
   pub original_module_identifier: Option<ModuleIdentifier>,
   pub factory_result: ModuleFactoryResult,
   pub module_graph_module: Box<ModuleGraphModule>,
@@ -91,6 +120,7 @@ impl WorkerTask for FactorizeTask {
       current_profile.mark_factory_start();
     }
     let dependency = self.dependency;
+    let dep_id = *dependency.id();
 
     let context = if let Some(context) = dependency.get_context() {
       context
@@ -183,6 +213,7 @@ impl WorkerTask for FactorizeTask {
     }
 
     Ok(TaskResult::Factorize(Box::new(FactorizeTaskResult {
+      dependency: dep_id,
       is_entry: self.is_entry,
       original_module_identifier: self.original_module_identifier,
       from_cache: result.from_cache,
@@ -211,6 +242,22 @@ pub struct AddTask {
   pub is_entry: bool,
   pub current_profile: Option<Box<ModuleProfile>>,
   pub callback: Option<ModuleCreationCallback>,
+}
+
+impl std::fmt::Debug for AddTask {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("AddTask")
+      .field(
+        "original_module_identifier",
+        &self.original_module_identifier,
+      )
+      .field("module", &self.module)
+      .field("module_graph_module", &self.module_graph_module)
+      .field("dependencies", &self.dependencies)
+      .field("is_entry", &self.is_entry)
+      .field("current_profile", &self.current_profile)
+      .finish()
+  }
 }
 
 #[derive(Debug)]
@@ -298,6 +345,7 @@ fn set_resolved_module(
 
 pub type AddQueue = WorkerQueue<AddTask>;
 
+#[derive(Debug)]
 pub struct BuildTask {
   pub module: Box<dyn Module>,
   pub resolver_factory: Arc<ResolverFactory>,
@@ -350,11 +398,6 @@ impl WorkerTask for BuildTask {
           })
           .await;
 
-        plugin_driver
-          .succeed_module(&**module)
-          .await
-          .unwrap_or_else(|e| panic!("Run succeed_module hook failed: {}", e));
-
         result.map(|t| (t, module))
       })
       .await
@@ -369,6 +412,16 @@ impl WorkerTask for BuildTask {
 
     if let Some(current_profile) = &self.current_profile {
       current_profile.mark_building_end();
+    }
+
+    if let Ok(build_result) = &build_result {
+      plugin_driver
+        .succeed_module(&SucceedModuleArgs {
+          module: &module,
+          build_result: &build_result.inner,
+        })
+        .await
+        .unwrap_or_else(|e| panic!("Run succeed_module hook failed: {}", e));
     }
 
     build_result.map(|build_result| {
@@ -387,6 +440,7 @@ impl WorkerTask for BuildTask {
 
 pub type BuildQueue = WorkerQueue<BuildTask>;
 
+#[derive(Debug)]
 pub struct ProcessDependenciesTask {
   pub original_module_identifier: ModuleIdentifier,
   pub dependencies: Vec<DependencyId>,
@@ -453,3 +507,141 @@ impl CleanTask {
 pub type CleanQueue = WorkerQueue<CleanTask>;
 
 pub type ModuleCreationCallback = Box<dyn FnOnce(&BoxModule) + Send>;
+
+pub type QueueHandleCallback = Box<dyn FnOnce(ModuleIdentifier, &mut Compilation) + Send + Sync>;
+
+#[derive(Debug)]
+pub enum QueueTask {
+  Factorize(Box<FactorizeTask>),
+  Add(Box<AddTask>),
+  Build(Box<BuildTask>),
+  ProcessDependencies(Box<ProcessDependenciesTask>),
+
+  Subscription(Box<Subscription>),
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum TaskCategory {
+  Factorize = 0,
+  Add = 1,
+  Build = 2,
+  ProcessDependencies = 3,
+}
+
+pub struct Subscription {
+  category: TaskCategory,
+  key: String,
+  callback: QueueHandleCallback,
+}
+
+impl std::fmt::Debug for Subscription {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("Subscription")
+      .field("category", &self.category)
+      .finish()
+  }
+}
+
+#[derive(Clone)]
+pub struct QueueHandler {
+  sender: UnboundedSender<QueueTask>,
+}
+
+impl std::fmt::Debug for QueueHandler {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("QueueHandler")
+      .field("sender", &self.sender)
+      .finish()
+  }
+}
+
+impl QueueHandler {
+  pub fn wait_for(&self, key: String, category: TaskCategory, callback: QueueHandleCallback) {
+    self
+      .sender
+      .send(QueueTask::Subscription(Box::new(Subscription {
+        category,
+        key,
+        callback,
+      })))
+      .expect("failed to wait task");
+  }
+}
+
+pub struct QueueHandlerProcessor {
+  receiver: UnboundedReceiver<QueueTask>,
+  callbacks: [FxHashMap<String, Vec<QueueHandleCallback>>; 4],
+  finished: [FxHashMap<String, ModuleIdentifier>; 4],
+}
+
+impl QueueHandlerProcessor {
+  pub fn try_process(
+    &mut self,
+    compilation: &mut Compilation,
+    factorize_queue: &mut FactorizeQueue,
+    add_queue: &mut AddQueue,
+    build_queue: &mut BuildQueue,
+    process_dependencies_queue: &mut ProcessDependenciesQueue,
+  ) {
+    while let Ok(task) = self.receiver.try_recv() {
+      match task {
+        QueueTask::Factorize(task) => {
+          factorize_queue.add_task(*task);
+        }
+        QueueTask::Add(task) => {
+          add_queue.add_task(*task);
+        }
+        QueueTask::Build(task) => {
+          build_queue.add_task(*task);
+        }
+        QueueTask::ProcessDependencies(task) => {
+          process_dependencies_queue.add_task(*task);
+        }
+        QueueTask::Subscription(subscription) => {
+          let Subscription {
+            category,
+            key,
+            callback,
+          } = *subscription;
+          if let Some(module) = self.finished[category as usize].get(&key) {
+            // already finished
+            callback(*module, compilation);
+          } else {
+            self.callbacks[category as usize]
+              .entry(key)
+              .or_default()
+              .push(callback);
+          }
+        }
+      }
+    }
+  }
+
+  pub fn flush_callback(
+    &mut self,
+    category: TaskCategory,
+    key: &str,
+    module: ModuleIdentifier,
+    compilation: &mut Compilation,
+  ) {
+    self.finished[category as usize].insert(key.into(), module);
+    if let Some(callbacks) = self.callbacks[category as usize].get_mut(key) {
+      while let Some(cb) = callbacks.pop() {
+        cb(module, compilation);
+      }
+    }
+  }
+}
+
+pub fn create_queue_handle() -> (QueueHandler, QueueHandlerProcessor) {
+  let (tx, rx) = unbounded_channel();
+
+  (
+    QueueHandler { sender: tx },
+    QueueHandlerProcessor {
+      receiver: rx,
+      callbacks: Default::default(),
+      finished: Default::default(),
+    },
+  )
+}
