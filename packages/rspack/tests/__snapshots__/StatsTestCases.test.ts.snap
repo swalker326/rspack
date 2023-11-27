@@ -190,7 +190,11 @@ import rawModule from './raw.png';
   "errors": [],
   "errorsCount": 0,
   "filteredModules": undefined,
+<<<<<<< HEAD
   "hash": "62ac3b1146fb1565fbd4",
+=======
+  "hash": "d039dac81f5ffc79248d",
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
   "logging": {},
   "modules": [
     {
@@ -380,7 +384,11 @@ chunk {main} bundle.js (main) [entry]
   esm import ./stringModule [10]
 webpack/runtime/public_path {main}
 webpack/runtime/make_namespace_object {main}
+<<<<<<< HEAD
 Rspack compiled successfully (62ac3b1146fb1565fbd4)"
+=======
+Rspack compiled successfully (d039dac81f5ffc79248d)"
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
 `;
 
 exports[`StatsTestCases should print correct stats for filename 1`] = `
@@ -544,7 +552,11 @@ exports[`StatsTestCases should print correct stats for filename 1`] = `
   "errors": [],
   "errorsCount": 0,
   "filteredModules": undefined,
+<<<<<<< HEAD
   "hash": "d11c74c648d060ebcdfd",
+=======
+  "hash": "73d6dbf085ec9e712627",
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
   "logging": {},
   "modules": [
     {
@@ -787,7 +799,11 @@ webpack/runtime/make_namespace_object {main}
 webpack/runtime/require_chunk_loading {main}
 webpack/runtime/define_property_getters {main}
 webpack/runtime/get_chunk_filename/__webpack_require__.u {main}
+<<<<<<< HEAD
 Rspack compiled successfully (d11c74c648d060ebcdfd)"
+=======
+Rspack compiled successfully (73d6dbf085ec9e712627)"
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
 `;
 
 exports[`StatsTestCases should print correct stats for hot+production 1`] = `
@@ -1516,7 +1532,11 @@ import(/* webpackChunkName: "c" */ "./c");
       "errors": [],
       "errorsCount": 0,
       "filteredModules": undefined,
+<<<<<<< HEAD
       "hash": "4da06cdbffcc858493d3",
+=======
+      "hash": "5a43126faa8aa34180ae",
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
       "logging": {},
       "modules": [
         {
@@ -2132,7 +2152,11 @@ import(/* webpackChunkName: "c" */ "./c");
       "errors": [],
       "errorsCount": 0,
       "filteredModules": undefined,
+<<<<<<< HEAD
       "hash": "b7c4a03979d24b362924",
+=======
+      "hash": "654182725b3a269e85d7",
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
       "logging": {},
       "modules": [
         {
@@ -2818,7 +2842,11 @@ import(/* webpackChunkName: "c" */ "./c");
       "errors": [],
       "errorsCount": 0,
       "filteredModules": undefined,
+<<<<<<< HEAD
       "hash": "64096f05f9e44ebb2bba",
+=======
+      "hash": "c31e69fff0635b11a4a2",
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
       "logging": {},
       "modules": [
         {
@@ -3538,7 +3566,11 @@ import(/* webpackChunkName: "c" */ "./c");
       "errors": [],
       "errorsCount": 0,
       "filteredModules": undefined,
+<<<<<<< HEAD
       "hash": "2a2f992ca23e8aee62a6",
+=======
+      "hash": "614a08891b55fa664bf1",
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
       "logging": {},
       "modules": [
         {
@@ -3909,7 +3941,11 @@ import(/* webpackChunkName: "c" */ "./c");
   ],
   "errors": [],
   "errorsCount": 0,
+<<<<<<< HEAD
   "hash": "4da06cdbffcc858493d3b7c4a03979d24b36292464096f05f9e44ebb2bba2a2f992ca23e8aee62a6",
+=======
+  "hash": "5a43126faa8aa34180ae654182725b3a269e85d7c31e69fff0635b11a4a2614a08891b55fa664bf1",
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
   "warnings": [],
   "warningsCount": 0,
 }
@@ -3948,7 +3984,11 @@ exports[`StatsTestCases should print correct stats for limit-chunk-count-plugin 
   webpack/runtime/make_namespace_object {main}
   webpack/runtime/define_property_getters {main}
   webpack/runtime/create_fake_namespace_object {main}
+<<<<<<< HEAD
   1 chunks compiled successfully (4da06cdbffcc858493d3)
+=======
+  1 chunks compiled successfully (5a43126faa8aa34180ae)
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
 
 2 chunks:
   PublicPath: (none)
@@ -3986,7 +4026,11 @@ exports[`StatsTestCases should print correct stats for limit-chunk-count-plugin 
   webpack/runtime/define_property_getters {main}
   webpack/runtime/create_fake_namespace_object {main}
   webpack/runtime/get_chunk_filename/__webpack_require__.u {main}
+<<<<<<< HEAD
   2 chunks compiled successfully (b7c4a03979d24b362924)
+=======
+  2 chunks compiled successfully (654182725b3a269e85d7)
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
 
 3 chunks:
   PublicPath: (none)
@@ -4026,7 +4070,11 @@ exports[`StatsTestCases should print correct stats for limit-chunk-count-plugin 
   webpack/runtime/define_property_getters {main}
   webpack/runtime/create_fake_namespace_object {main}
   webpack/runtime/get_chunk_filename/__webpack_require__.u {main}
+<<<<<<< HEAD
   3 chunks compiled successfully (64096f05f9e44ebb2bba)
+=======
+  3 chunks compiled successfully (c31e69fff0635b11a4a2)
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
 
 4 chunks:
   PublicPath: (none)
@@ -4068,7 +4116,11 @@ exports[`StatsTestCases should print correct stats for limit-chunk-count-plugin 
   webpack/runtime/define_property_getters {main}
   webpack/runtime/create_fake_namespace_object {main}
   webpack/runtime/get_chunk_filename/__webpack_require__.u {main}
+<<<<<<< HEAD
   4 chunks compiled successfully (2a2f992ca23e8aee62a6)"
+=======
+  4 chunks compiled successfully (614a08891b55fa664bf1)"
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
 `;
 
 exports[`StatsTestCases should print correct stats for loader-builtin-swc-plugin-warn 1`] = `
@@ -5139,7 +5191,11 @@ console.log(a);
   ],
   "errorsCount": 1,
   "filteredModules": undefined,
+<<<<<<< HEAD
   "hash": "26912d71518dd751cffb",
+=======
+  "hash": "b6cb152656035d1a4dd0",
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
   "logging": {},
   "modules": [
     {
@@ -5340,7 +5396,11 @@ error[internal]: Resolve error
 
 
 
+<<<<<<< HEAD
 Rspack compiled with 1 error (26912d71518dd751cffb)"
+=======
+Rspack compiled with 1 error (b6cb152656035d1a4dd0)"
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
 `;
 
 exports[`StatsTestCases should print correct stats for resolve-unexpected-exports-in-pkg 1`] = `
@@ -5484,7 +5544,11 @@ console.log(a);
   ],
   "errorsCount": 1,
   "filteredModules": undefined,
+<<<<<<< HEAD
   "hash": "a4659b8ec3c289e07669",
+=======
+  "hash": "fa95ef35702693fe1d8e",
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
   "logging": {},
   "modules": [
     {
@@ -5679,7 +5743,11 @@ error[internal]: Export should be relative path and start with "./", but got ../
 
 
 
+<<<<<<< HEAD
 Rspack compiled with 1 error (a4659b8ec3c289e07669)"
+=======
+Rspack compiled with 1 error (fa95ef35702693fe1d8e)"
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
 `;
 
 exports[`StatsTestCases should print correct stats for runtime-modules 1`] = `
@@ -6119,7 +6187,11 @@ import rawModule from './raw.png';
   "errors": [],
   "errorsCount": 0,
   "filteredModules": undefined,
+<<<<<<< HEAD
   "hash": "7a6e65b1aedebf8e24aa",
+=======
+  "hash": "e5e69c13c4066c103b61",
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
   "logging": {},
   "modules": [
     {
@@ -6325,7 +6397,11 @@ runtime modules 4 modules
 ./raw.png
 ./index.js
 ./stringModule.js
+<<<<<<< HEAD
 Rspack compiled successfully (7a6e65b1aedebf8e24aa)"
+=======
+Rspack compiled successfully (e5e69c13c4066c103b61)"
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
 `;
 
 exports[`StatsTestCases should print correct stats for stats-hooks 1`] = `

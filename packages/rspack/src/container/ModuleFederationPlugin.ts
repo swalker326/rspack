@@ -5,10 +5,7 @@ import {
 	ExternalsType,
 	externalsType
 } from "../config";
-<<<<<<< HEAD
 import { SharePlugin, Shared } from "../sharing/SharePlugin";
-=======
->>>>>>> c30ae9213 (feat: Module Federation, part 2, ContainerReferencePlugin (#4735))
 import { isValidate } from "../util/validate";
 import { ContainerPlugin, Exposes } from "./ContainerPlugin";
 import { ContainerReferencePlugin, Remotes } from "./ContainerReferencePlugin";
@@ -67,7 +64,6 @@ export class ModuleFederationPlugin {
 					? options.remotes.length > 0
 					: Object.keys(options.remotes).length > 0)
 			) {
-<<<<<<< HEAD
 				new ContainerReferencePlugin({
 					remoteType,
 					shareScope: options.shareScope,
@@ -80,23 +76,6 @@ export class ModuleFederationPlugin {
 					shareScope: options.shareScope
 				}).apply(compiler);
 			}
-=======
-				new ContainerReferencePlugin(
-					{
-						remoteType,
-						shareScope: options.shareScope,
-						remotes: options.remotes
-					},
-					mfRuntimePlugin
-				).apply(compiler);
-			}
-			// if (options.shared) {
-			// 	new SharePlugin({
-			// 		shared: options.shared,
-			// 		shareScope: options.shareScope
-			// 	}).apply(compiler);
-			// }
->>>>>>> c30ae9213 (feat: Module Federation, part 2, ContainerReferencePlugin (#4735))
 		});
 	}
 }

@@ -79,7 +79,11 @@ describe("Stats", () => {
 
 
 
+<<<<<<< HEAD
 		Rspack compiled with 1 error (9bed7a0c293db88bb175)"
+=======
+		Rspack compiled with 1 error (a57d43d912c94f9cf5f2)"
+>>>>>>> ce3a66a5c (feat: bump swc to support `format.inline_script` (#4786))
 	`);
 	});
 

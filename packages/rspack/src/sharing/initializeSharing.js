@@ -23,11 +23,7 @@ if (__webpack_require__.MF) {
 		var warn = function (msg) {
 			if (typeof console !== "undefined" && console.warn) console.warn(msg);
 		};
-<<<<<<< HEAD
 		var uniqueName = data.uniqueName;
-=======
-		var uniqueName = "app";
->>>>>>> c30ae9213 (feat: Module Federation, part 2, ContainerReferencePlugin (#4735))
 		var register = function (name, version, factory, eager) {
 			var versions = (scope[name] = scope[name] || {});
 			var activeVersion = versions[version];
