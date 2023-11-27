@@ -40,8 +40,6 @@ export class ModuleFederationPlugin {
 		) {
 			compiler.options.output.enabledLibraryTypes!.push(library.type);
 		}
-		const mfRuntimePlugin = new ModuleFederationRuntimePlugin();
-		mfRuntimePlugin.apply(compiler);
 		compiler.hooks.afterPlugins.tap("ModuleFederationPlugin", () => {
 			if (
 				options.exposes &&

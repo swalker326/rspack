@@ -72,8 +72,11 @@ pub enum DependencyType {
   ProvideSharedModule,
   /// provide module for shared
   ProvideModuleForShared,
+<<<<<<< HEAD
   /// consume shared fallback
   ConsumeSharedFallback,
+=======
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
   Custom(Box<str>), // TODO it will increase large layout size
 }
 
@@ -118,7 +121,10 @@ impl DependencyType {
       DependencyType::RemoteToExternal => Cow::Borrowed("remote to external"),
       DependencyType::ProvideSharedModule => Cow::Borrowed("provide shared module"),
       DependencyType::ProvideModuleForShared => Cow::Borrowed("provide module for shared"),
+<<<<<<< HEAD
       DependencyType::ConsumeSharedFallback => Cow::Borrowed("consume shared fallback"),
+=======
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
     }
   }
 }

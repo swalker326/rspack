@@ -1,7 +1,11 @@
 use swc_core::ecma::atoms::JsWord;
 
 use crate::{
+<<<<<<< HEAD
   get_import_var, property_access, to_comment, AsyncDependenciesBlockIdentifier, Compilation,
+=======
+  get_import_var, property_access, AsyncDependenciesBlockIdentifier, Compilation,
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
   DependenciesBlock, DependencyId, ExportsType, FakeNamespaceObjectMode, InitFragmentExt,
   InitFragmentKey, InitFragmentStage, ModuleGraph, ModuleIdentifier, NormalInitFragment,
   RuntimeGlobals, TemplateContext,

@@ -87,7 +87,10 @@ pub struct NormalModuleCreateData<'a> {
   pub dependency_type: DependencyType,
   pub resolve_data_request: &'a str,
   pub resource_resolve_data: ResourceData,
+<<<<<<< HEAD
   pub context: Context,
+=======
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
 }
 
 #[derive(Debug, Clone)]

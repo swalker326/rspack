@@ -636,7 +636,10 @@ impl NormalModuleFactory {
       dependency_type: data.dependency.dependency_type().clone(),
       resolve_data_request: dependency.request(),
       resource_resolve_data: resource_data.clone(),
+<<<<<<< HEAD
       context: data.context.clone(),
+=======
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
     };
     let module = if let Some(module) = self
       .plugin_driver

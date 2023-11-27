@@ -146,7 +146,10 @@ export const container = {
 };
 
 import { ProvideSharedPlugin } from "./sharing/ProvideSharedPlugin";
+<<<<<<< HEAD
 import { ConsumeSharedPlugin } from "./sharing/ConsumeSharedPlugin";
+=======
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
 import { SharePlugin } from "./sharing/SharePlugin";
 export type {
 	ProvideSharedPluginOptions,
@@ -156,6 +159,7 @@ export type {
 	ProvidesObject
 } from "./sharing/ProvideSharedPlugin";
 export type {
+<<<<<<< HEAD
 	ConsumeSharedPluginOptions,
 	Consumes,
 	ConsumesConfig,
@@ -163,6 +167,8 @@ export type {
 	ConsumesObject
 } from "./sharing/ConsumeSharedPlugin";
 export type {
+=======
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
 	SharePluginOptions,
 	Shared,
 	SharedConfig,
@@ -171,7 +177,10 @@ export type {
 } from "./sharing/SharePlugin";
 export const sharing = {
 	ProvideSharedPlugin,
+<<<<<<< HEAD
 	ConsumeSharedPlugin,
+=======
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
 	SharePlugin
 };
 

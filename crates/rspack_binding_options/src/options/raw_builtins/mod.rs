@@ -44,7 +44,11 @@ use rspack_plugin_swc_js_minimizer::SwcJsMinimizerRspackPlugin;
 use rspack_plugin_wasm::enable_wasm_loading_plugin;
 use rspack_plugin_web_worker_template::web_worker_template_plugin;
 
+<<<<<<< HEAD
 use self::raw_mf::{RawConsumeOptions, RawContainerReferencePluginOptions, RawProvideOptions};
+=======
+use self::raw_mf::{RawContainerReferencePluginOptions, RawProvideOptions};
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
 pub use self::{
   raw_banner::RawBannerPluginOptions, raw_copy::RawCopyRspackPluginOptions,
   raw_html::RawHtmlRspackPluginOptions, raw_limit_chunk_count::RawLimitChunkCountPluginOptions,
@@ -84,7 +88,10 @@ pub enum BuiltinPluginName {
   ContainerReferencePlugin,
   ModuleFederationRuntimePlugin,
   ProvideSharedPlugin,
+<<<<<<< HEAD
   ConsumeSharedPlugin,
+=======
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
 
   // rspack specific plugins
   HttpExternalsRspackPlugin,
@@ -226,6 +233,7 @@ impl RawOptionsApply for BuiltinPlugin {
         provides.sort_unstable_by_key(|(k, _)| k.to_string());
         plugins.push(ProvideSharedPlugin::new(provides).boxed())
       }
+<<<<<<< HEAD
       BuiltinPluginName::ConsumeSharedPlugin => {
         let consumes: Vec<_> = downcast_into::<Vec<RawConsumeOptions>>(self.options)?
           .into_iter()
@@ -233,6 +241,8 @@ impl RawOptionsApply for BuiltinPlugin {
           .collect();
         plugins.push(ConsumeSharedPlugin::new(consumes).boxed())
       }
+=======
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
 
       // rspack specific plugins
       BuiltinPluginName::HttpExternalsRspackPlugin => {

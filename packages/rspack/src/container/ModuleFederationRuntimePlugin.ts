@@ -7,7 +7,11 @@ const ModuleFederationRuntimePlugin2 = create(
 	() => undefined
 );
 
+<<<<<<< HEAD
 const compilerToPlugins = new WeakMap<Compiler, Set<string>>();
+=======
+const compilerToPlugins = new WeakMap<Compiler, string[]>();
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
 
 export class ModuleFederationRuntimePlugin {
 	apply(compiler: Compiler) {
@@ -19,9 +23,13 @@ export class ModuleFederationRuntimePlugin {
 				const plugins = compilerToPlugins.get(compiler);
 				if (plugins) {
 					// TODO: move to rust side so don't depend on dataUrl?
+<<<<<<< HEAD
 					const entry = [...plugins]
 						.map(p => `import ${JSON.stringify(p)};`)
 						.join("\n");
+=======
+					const entry = plugins.map(p => `import "${p}";`).join("\n");
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
 					new EntryPlugin(compiler.context, `data:text/javascript,${entry}`, {
 						name: undefined
 					}).apply(compiler);
@@ -34,8 +42,14 @@ export class ModuleFederationRuntimePlugin {
 	static addPlugin(compiler: Compiler, plugin: string) {
 		let plugins = compilerToPlugins.get(compiler);
 		if (!plugins) {
+<<<<<<< HEAD
 			compilerToPlugins.set(compiler, (plugins = new Set()));
 		}
 		plugins.add(plugin);
+=======
+			compilerToPlugins.set(compiler, (plugins = []));
+		}
+		plugins.push(plugin);
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
 	}
 }

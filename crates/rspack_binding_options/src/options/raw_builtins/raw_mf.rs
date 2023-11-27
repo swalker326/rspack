@@ -98,7 +98,11 @@ pub struct RawProvideOptions {
   pub share_key: String,
   pub share_scope: String,
   #[napi(ts_type = "string | false | undefined")]
+<<<<<<< HEAD
   pub version: Option<RawVersion>,
+=======
+  pub version: Option<RawProvideVersion>,
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
   pub eager: bool,
 }
 
@@ -109,13 +113,18 @@ impl From<RawProvideOptions> for (String, ProvideOptions) {
       ProvideOptions {
         share_key: value.share_key,
         share_scope: value.share_scope,
+<<<<<<< HEAD
         version: value.version.map(|v| RawVersionWrapper(v).into()),
+=======
+        version: value.version.map(|v| RawProvideVersionWrapper(v).into()),
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
         eager: value.eager,
       },
     )
   }
 }
 
+<<<<<<< HEAD
 #[derive(Debug)]
 #[napi(object)]
 pub struct RawConsumeOptions {
@@ -157,12 +166,21 @@ struct RawVersionWrapper(RawVersion);
 
 impl From<RawVersionWrapper> for ProvideVersion {
   fn from(value: RawVersionWrapper) -> Self {
+=======
+pub type RawProvideVersion = Either<String, bool>;
+
+struct RawProvideVersionWrapper(RawProvideVersion);
+
+impl From<RawProvideVersionWrapper> for ProvideVersion {
+  fn from(value: RawProvideVersionWrapper) -> Self {
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
     match value.0 {
       Either::A(s) => ProvideVersion::Version(s),
       Either::B(_) => ProvideVersion::False,
     }
   }
 }
+<<<<<<< HEAD
 
 impl From<RawVersionWrapper> for ConsumeVersion {
   fn from(value: RawVersionWrapper) -> Self {
@@ -172,3 +190,5 @@ impl From<RawVersionWrapper> for ConsumeVersion {
     }
   }
 }
+=======
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))

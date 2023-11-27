@@ -140,8 +140,12 @@ pub enum ModuleType {
   Asset,
   Runtime,
   Remote,
+<<<<<<< HEAD
   ProvideShared,
   ConsumeShared,
+=======
+  Provide,
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
 }
 
 impl ModuleType {
@@ -227,8 +231,12 @@ impl ModuleType {
       ModuleType::AssetInline => "asset/inline",
       ModuleType::Runtime => "runtime",
       ModuleType::Remote => "remote-module",
+<<<<<<< HEAD
       ModuleType::ProvideShared => "provide-module",
       ModuleType::ConsumeShared => "consume-shared-module",
+=======
+      ModuleType::Provide => "provide-module",
+>>>>>>> 24ebe5e86 (feat: Module Federation, part 3, ProvideSharedPlugin (#4778))
     }
   }
 }
