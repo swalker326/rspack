@@ -43,6 +43,9 @@ fn tree_shaking(fixture_path: PathBuf) {
         if options.optimization.side_effects.is_enable() {
           plugins.push(Box::<SideEffectsFlagPlugin>::default());
         }
+        if options.optimization.mangle_exports {
+          plugins.push(Box::new(MangleExportsPlugin::new(true)));
+        }
         plugins.push(Box::<FlagDependencyExportsPlugin>::default());
         plugins.push(Box::<FlagDependencyUsagePlugin>::default());
       },

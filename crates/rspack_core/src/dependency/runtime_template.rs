@@ -23,7 +23,7 @@ pub fn export_from_import(
     module,
     ..
   } = code_generatable_context;
-
+  let is_new_treeshaking = compilation.options.is_new_tree_shaking();
   let exports_type = get_exports_type(&compilation.module_graph, id, &module.identifier());
 
   if default_interop {
@@ -79,8 +79,12 @@ pub fn export_from_import(
   }
 
   if !export_name.is_empty() {
-    // TODO check used
-    let property = property_access(&export_name, 0);
+    let used = if is_new_treeshaking {
+      export_name
+    } else {
+      export_name
+    };
+    let property = property_access(&used, 0);
     if is_call && !call_context {
       format!("(0, {import_var}{property})")
     } else {

@@ -25,6 +25,7 @@ pub struct RawOptimizationOptions {
   pub used_exports: String,
   pub provided_exports: bool,
   pub inner_graph: bool,
+  pub mangle_exports: bool,
   pub real_content_hash: bool,
 }
 
@@ -65,6 +66,7 @@ impl RawOptionsApply for RawOptimizationOptions {
       provided_exports: self.provided_exports,
       used_exports: UsedExportsOption::from(self.used_exports.as_str()),
       inner_graph: self.inner_graph,
+      mangle_exports: self.mangle_exports,
     })
   }
 }
