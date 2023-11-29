@@ -171,7 +171,6 @@ impl DependencyTemplate for HarmonyImportSpecifierDependency {
       .module_graph
       .module_identifier_by_dependency_id(&self.id);
     let import_var = get_import_var(&compilation.module_graph, self.id);
-    dbg!(&import_var);
 
     // TODO: scope hoist
     if is_new_treeshaking {
@@ -191,7 +190,6 @@ impl DependencyTemplate for HarmonyImportSpecifierDependency {
       self.call,
       !self.direct_import,
     );
-    dbg!(&export_expr);
     if self.shorthand {
       source.insert(self.end, format!(": {export_expr}").as_str(), None);
     } else {
