@@ -19,6 +19,7 @@ on:
   push:
     branches:
       - main
+      - jerry/test
     paths-ignore:
       - "**/*.md"
     tags-ignore:
@@ -34,6 +35,7 @@ jobs:
     uses: ./.github/workflows/get-runner-labels.yml
 
   test-linux:
+    if: false
     name: Test Linux
     needs: [get-runner-labels]
     uses: ./.github/workflows/reusable-build.yml
@@ -46,26 +48,26 @@ jobs:
   test-windows:
     name: Test Windows
     needs: [get-runner-labels]
-    if: github.ref_name == 'main'
     uses: ./.github/workflows/reusable-build.yml
     with:
       target: x86_64-pc-windows-msvc
       profile: "debug"
-      runner: ${{ needs.get-runner-labels.outputs.WINDOWS_RUNNER_LABELS }}
+      runner: '["Windows","cross-platform"]'
       test-diff: true
 
   test-mac:
+    if: false
     name: Test Mac
     needs: [get-runner-labels]
-    if: github.ref_name == 'main'
     uses: ./.github/workflows/reusable-build.yml
     with:
       target: x86_64-apple-darwin
-      profile: "debug"
-      runner: ${{ needs.get-runner-labels.outputs.MACOS_RUNNER_LABELS }}
+      profile: "release"
+      runner: '"cross-platform"'
       test-diff: true
 
   cargo-deny:
+    if: false
     name: Check license of dependencies
     runs-on: ubuntu-latest
     steps:
@@ -80,6 +82,7 @@ jobs:
         run: |
           cargo deny check license
   spell:
+    if: false
     name: Spell check
     runs-on: ubuntu-latest
     steps:
@@ -90,6 +93,7 @@ jobs:
           files: .
 
   oxlint:
+    if: false
     name: Lint JS
     runs-on: ubuntu-latest
     steps:
@@ -111,6 +115,7 @@ jobs:
         run: pnpm run lint:js
 
   rust_changes:
+    if: false
     name: Rust Changes
     runs-on: ubuntu-latest
     outputs:
@@ -130,6 +135,7 @@ jobs:
               - 'rust-toolchain.toml'
 
   pnpm_lockfile_check:
+    if: false
     name: Pnpm Lockfile Check
     runs-on: ubuntu-latest
     steps:
