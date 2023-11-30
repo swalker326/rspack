@@ -175,6 +175,8 @@ impl ExportsInfoId {
     changed
   }
 
+  /// # Panic
+  /// this function would panic if name doesn't exists in current exportsInfo
   pub fn get_read_only_export_info<'a>(
     &self,
     name: &JsWord,
@@ -727,6 +729,11 @@ impl ExportInfoId {
     }
     changed
   }
+
+  pub fn get_used(&self, mg: &ModuleGraph, runtime: Option<&RuntimeSpec>) -> UsageState {
+    let export_info = mg.get_export_info_by_id(self);
+    export_info.get_used(runtime)
+  }
 }
 impl Default for ExportInfoId {
   fn default() -> Self {
@@ -1222,20 +1229,20 @@ impl ExportInfo {
     );
     let new_exports_info = ExportsInfo::new(other_exports_info.id, side_effects_only_info.id);
     let new_exports_info_id = new_exports_info.id;
-
-    let old_exports_info = self.exports_info;
-    new_exports_info.id.set_has_provide_info(mg);
-    self.exports_info_owned = true;
-    self.exports_info = Some(new_exports_info.id);
-    if let Some(exports_info) = old_exports_info {
-      exports_info.set_redirect_name_to(mg, Some(new_exports_info_id));
-    }
     mg.exports_info_map
       .insert(new_exports_info_id, new_exports_info);
     mg.export_info_map
       .insert(other_exports_info.id, other_exports_info);
     mg.export_info_map
       .insert(side_effects_only_info.id, side_effects_only_info);
+
+    let old_exports_info = self.exports_info;
+    new_exports_info_id.set_has_provide_info(mg);
+    self.exports_info_owned = true;
+    self.exports_info = Some(new_exports_info_id);
+    if let Some(exports_info) = old_exports_info {
+      exports_info.set_redirect_name_to(mg, Some(new_exports_info_id));
+    }
     new_exports_info_id
   }
 }
