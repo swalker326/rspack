@@ -42,11 +42,11 @@ use crate::{
   CleanTask, CleanTaskResult, CodeGenerationResult, CodeGenerationResults, CompilationLogger,
   CompilationLogging, CompilerOptions, ContentHashArgs, ContextDependency, DependencyId,
   DependencyParents, DependencyType, Entry, EntryData, EntryOptions, Entrypoint, FactorizeQueue,
-  FactorizeTask, FactorizeTaskResult, Filename, Logger, Module, ModuleGraph, ModuleIdentifier,
-  ModuleProfile, ModuleType, PathData, ProcessAssetsArgs, ProcessDependenciesQueue,
-  ProcessDependenciesResult, ProcessDependenciesTask, RenderManifestArgs, Resolve, ResolverFactory,
-  RuntimeGlobals, RuntimeModule, RuntimeSpec, SharedPluginDriver, SourceType, Stats, TaskResult,
-  WorkerTask,
+  FactorizeTask, FactorizeTaskResult, Filename, Logger, Module, ModuleCreationCallback,
+  ModuleGraph, ModuleIdentifier, ModuleProfile, ModuleType, PathData, ProcessAssetsArgs,
+  ProcessDependenciesQueue, ProcessDependenciesResult, ProcessDependenciesTask, RenderManifestArgs,
+  Resolve, ResolverFactory, RuntimeGlobals, RuntimeModule, RuntimeSpec, SharedPluginDriver,
+  SourceType, Stats, TaskResult, WorkerTask,
 };
 use crate::{tree_shaking::visitor::OptimizeAnalyzeResult, Context};
 
@@ -496,6 +496,7 @@ impl Compilation {
           parent_module
             .and_then(|m| m.as_normal_module())
             .and_then(|module| module.name_for_condition()),
+          None,
         );
       });
 
@@ -627,7 +628,10 @@ impl Compilation {
           .module_by_identifier(original_module_identifier)
           .expect("Module expected");
 
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let mut remaining = sorted_dependencies.len();
         for dependencies in sorted_dependencies.into_values() {
+          let tx = tx.clone();
           self.handle_module_creation(
             &mut factorize_queue,
             Some(task.original_module_identifier),
@@ -641,16 +645,33 @@ impl Compilation {
             module
               .as_normal_module()
               .and_then(|module| module.name_for_condition()),
+            Some(Box::new(move |_| {
+              tx.send(())
+                .expect("Failed to send callback to process_dependencies");
+            })),
           );
         }
+        drop(tx);
 
-        result_tx
-          .send(Ok(TaskResult::ProcessDependencies(Box::new(
+        let tx = result_tx.clone();
+
+        tokio::spawn(async move {
+          loop {
+            if remaining == 0 {
+              break;
+            }
+
+            rx.recv().await;
+            remaining -= 1;
+          }
+
+          tx.send(Ok(TaskResult::ProcessDependencies(Box::new(
             ProcessDependenciesResult {
               module_identifier: task.original_module_identifier,
             },
           ))))
           .expect("Failed to send process dependencies result");
+        });
       }
       process_deps_time.end(start);
 
@@ -668,6 +689,8 @@ impl Compilation {
                 current_profile,
                 exports_info_related,
                 from_cache,
+                callback,
+                ..
               } = task_result;
 
               if let Some(counter) = &mut factorize_cache_counter {
@@ -718,6 +741,7 @@ impl Compilation {
                 dependencies,
                 is_entry,
                 current_profile,
+                callback,
               });
             }
             Ok(TaskResult::Add(box task_result)) => match task_result {
@@ -1016,6 +1040,7 @@ impl Compilation {
     resolve_options: Option<Box<Resolve>>,
     lazy_visit_modules: std::collections::HashSet<String>,
     issuer: Option<Box<str>>,
+    callback: Option<ModuleCreationCallback>,
   ) {
     let current_profile = self.options.profile.then(Box::<ModuleProfile>::default);
     queue.add_task(FactorizeTask {
@@ -1035,6 +1060,7 @@ impl Compilation {
       plugin_driver: self.plugin_driver.clone(),
       cache: self.cache.clone(),
       current_profile,
+      callback,
     });
   }
 

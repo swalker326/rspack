@@ -9,7 +9,7 @@ use crate::{
   ModuleProfile, ModuleType, NormalModuleFactory, NormalModuleFactoryContext, Resolve,
   ResolverFactory, SharedPluginDriver, WorkerQueue,
 };
-use crate::{DependencyId, ExportInfo, ExportsInfo, UsageState};
+use crate::{BoxModule, DependencyId, ExportInfo, ExportsInfo, UsageState};
 
 #[derive(Debug)]
 pub enum TaskResult {
@@ -41,6 +41,7 @@ pub struct FactorizeTask {
   pub plugin_driver: SharedPluginDriver,
   pub cache: Arc<Cache>,
   pub current_profile: Option<Box<ModuleProfile>>,
+  pub callback: Option<ModuleCreationCallback>,
 }
 
 /// a struct temporarily used creating ExportsInfo
@@ -50,7 +51,7 @@ pub struct ExportsInfoRelated {
   pub other_exports_info: ExportInfo,
   pub side_effects_info: ExportInfo,
 }
-#[derive(Debug)]
+
 pub struct FactorizeTaskResult {
   pub original_module_identifier: Option<ModuleIdentifier>,
   pub factory_result: ModuleFactoryResult,
@@ -61,6 +62,26 @@ pub struct FactorizeTaskResult {
   pub current_profile: Option<Box<ModuleProfile>>,
   pub exports_info_related: ExportsInfoRelated,
   pub from_cache: bool,
+  pub callback: Option<ModuleCreationCallback>,
+}
+
+impl std::fmt::Debug for FactorizeTaskResult {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("FactorizeTaskResult")
+      .field(
+        "original_module_identifier",
+        &self.original_module_identifier,
+      )
+      .field("factory_result", &self.factory_result)
+      .field("module_graph_module", &self.module_graph_module)
+      .field("dependencies", &self.dependencies)
+      .field("diagnostics", &self.diagnostics)
+      .field("is_entry", &self.is_entry)
+      .field("current_profile", &self.current_profile)
+      .field("exports_info_related", &self.exports_info_related)
+      .field("from_cache", &self.from_cache)
+      .finish()
+  }
 }
 
 #[async_trait::async_trait]
@@ -175,6 +196,7 @@ impl WorkerTask for FactorizeTask {
         other_exports_info,
         side_effects_info: side_effects_only_info,
       },
+      callback: self.callback,
     })))
   }
 }
@@ -188,6 +210,7 @@ pub struct AddTask {
   pub dependencies: Vec<DependencyId>,
   pub is_entry: bool,
   pub current_profile: Option<Box<ModuleProfile>>,
+  pub callback: Option<ModuleCreationCallback>,
 }
 
 #[derive(Debug)]
@@ -220,6 +243,10 @@ impl AddTask {
         module_identifier,
       )?;
 
+      if let Some(callback) = self.callback {
+        callback(&self.module);
+      }
+
       return Ok(TaskResult::Add(Box::new(AddTaskResult::ModuleReused {
         module: self.module,
       })));
@@ -244,6 +271,10 @@ impl AddTask {
 
     if let Some(current_profile) = &self.current_profile {
       current_profile.mark_integration_end();
+    }
+
+    if let Some(callback) = self.callback {
+      callback(&self.module);
     }
 
     Ok(TaskResult::Add(Box::new(AddTaskResult::ModuleAdded {
@@ -420,3 +451,5 @@ impl CleanTask {
 }
 
 pub type CleanQueue = WorkerQueue<CleanTask>;
+
+pub type ModuleCreationCallback = Box<dyn FnOnce(&BoxModule) + Send>;
