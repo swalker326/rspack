@@ -22,4 +22,5 @@ num-bigint   = "0.4.4"
 rayon        = { workspace = true }
 rspack_util  = { path = "../rspack_util" }
 rustc-hash   = { workspace = true }
+tokio        = { workspace = true }
 tracing      = { workspace = true }
